@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as droppr from '../interface';
 import { Header } from '../components/index';
-import '../styles/index.css';
 
 const statusInterval = 100; // 100ms
 const MB = 1000 * 1024;
