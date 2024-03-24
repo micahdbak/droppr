@@ -19,7 +19,7 @@ export function About() {
       </div>
 
       <div className='flex items-center justify-center m-12'>
-        <p></p>
+        <p>More to come...</p>
       </div>
 
     </div>
