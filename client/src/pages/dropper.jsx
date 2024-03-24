@@ -12,6 +12,7 @@ export function Dropper() {
   const [lastBytes, setLastBytes] = useState(0);
   const [isDropping, setIsDropping] = useState(false);
   const [status, setStatus] = useState('');
+  const [downloadStatus, setDownloadStatus] = useState('');
   const [transferid, setTransferid] = useState('');
   const [isDragging, setIsDragging] = useState(false);
 
@@ -32,19 +33,35 @@ export function Dropper() {
   // handling dropping files
   const handleDrop = (event) => {
     event.preventDefault();
-    setIsDropping(false);
 
-    const droppedFile = event.dataTransfer.files[0];
-    if (droppedFile) {
+    let _file = file;
+
+    if (file === null) {
+      const droppedFile = event.dataTransfer.files[0];
+
       setFile(droppedFile);
-      setStatus('File is dropped.');
+      _file = droppedFile;
 
-      droppr.drop(droppedFile, (update) => {
-        setFile(null);
+      setFileInfo({
+        name: droppedFile.name,
+        size: droppedFile.size,
+        type: droppedFile.type,
+      });
+    }
 
+    if (_file) {
+      setStatus('preparing');
+      setIsDropping(true);
+
+      droppr.drop(_file, (update) => {
         // if it provides the id attribute
         if (update.id) {
           setTransferid(update.id);
+        }
+
+        // nak
+        if (update.status === 'complete') {
+          setIsDropping(false);
         }
 
         // update status based on update
@@ -76,10 +93,10 @@ export function Dropper() {
       const speed = ((bytes - lastBytes) / statusInterval / 1000).toFixed(1); // MBps
 
       if (bytes === 0) {
-        setStatus('Waiting...');
+        setDownloadStatus('');
       } else {
-        setStatus(
-          `Dropped ${(bytes / MB).toFixed(1)} of ${(fileInfo.size / MB).toFixed(1)} MBs (${speed} MBps) (${percentage}%).`,
+        setDownloadStatus(
+          `Dropped ${(bytes / MB).toFixed(1)} of ${(fileInfo.size / MB).toFixed(1)} MB (${speed} MBps) (${percentage}%).`,
         );
       }
       setLastBytes(bytes);
@@ -101,32 +118,47 @@ export function Dropper() {
     <div>
       <Header />
       <div className="flex items-center justify-center my-10">
-        <p className="text-4xl font-semibold">Drop Files</p>
+        <p className="text-4xl font-light">Welcome to the Drop-Zone.</p>
       </div>
 
       {/* Drop-zone */}
-      <div
-        className={`bg-slate-100 p-36 mx-64 my-12 rounded-lg flex items-center justify-center border border-black border-dashed ${isDragging ? 'border-blue-500 border-2' : ''}`}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-      >
-        <div className="flex flex-col items-center justify-center py-10 text-center">
-          <p className="font-medium">Drop your files to upload</p>
-          <p className="mb-1">or</p>
-          <input type="file" onChange={handleFile} className="hidden" />
-          <button
-            className="bg-slate-200 px-4 py-2 rounded-lg"
-            onClick={() => document.querySelector('input[type="file"]').click()}
-          >
-            Browse Files
-          </button>
+      {file === null ? (
+        <div
+          className={`bg-slate-100 p-36 mx-auto w-3/4 h-3/4 my-12 rounded-lg flex items-center justify-center border border-black border-dashed ${isDragging ? 'border-blue-500 border-2' : ''}`}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+        >
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <p className="font-medium">Drop your files to upload</p>
+            <p className="mb-1">or</p>
+            <input type="file" onChange={handleFile} className="hidden" />
+            <button
+              className="bg-slate-200 px-4 py-2 rounded-lg"
+              onClick={() => document.querySelector('input[type="file"]').click()}
+            >
+              Browse Files
+            </button>
+          </div>
         </div>
-      </div>
-
-      {/* Display area */}
-      <div>{status}</div>
+      ) : (
+        <div className='flex flex-col flex-nowrap mx-auto w-3/4 h-3/4 items-center justify-center'>
+          <br />
+          <br />
+          <br />
+          <br />
+          <img src='/file.png' width='48px' height='48px' />
+          <br />
+          <p className='font-semibold'>{fileInfo.name}</p>
+          <p>{(fileInfo.size / 1024).toFixed(1)} kB</p>
+          <br />
+          <a href={`/?id=${transferid}`} className='text-blue-500'>Share this link with the intended recipient.</a>
+          <br />
+          <p className='text-slate-500'>{status}</p>
+          <p className='text-slate-500'>{downloadStatus}</p>
+        </div>
+      )}
     </div>
   );
 }

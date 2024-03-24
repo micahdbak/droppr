@@ -7,8 +7,6 @@ let rtc = null; // WebRTC connection
 let sc = null; // Signal Channel WebSocket connection
 let dc = null; // the data channel
 
-let _update = () => {};
-
 let isSendingFile = false;
 
 // drop all blobs for a file
@@ -70,27 +68,6 @@ async function dropFile(file) {
   dc.send('{"type":"complete"}');
 
   isSendingFile = false;
-}
-
-function onMessage(event) {
-  if (typeof event.data === 'string') {
-    const message = JSON.parse(event.data);
-
-    if (message.type === 'received') {
-      dc.close(); // if it hasn't been, yet
-      dc = null;
-
-      rtc.close(); // if it hasn't been, yet
-      rtc = null;
-
-      sc.close(); // if it hasn't been, yet
-      sc = null;
-
-      _update({
-        status: 'complete'
-      });
-    }
-  }
 }
 
 export function drop(file, update) {
@@ -173,7 +150,29 @@ export function drop(file, update) {
     dropFile(file);
   });
 
-  dc.addEventListener('message', onMessage);
+  dc.addEventListener('message', (event) => {
+    if (typeof event.data === 'string') {
+      const message = JSON.parse(event.data);
+
+      console.log(message);
+
+      if (message.type === 'received') {
+        console.log('hello?');
+        dc.close(); // if it hasn't been, yet
+        dc = null;
+
+        rtc.close(); // if it hasn't been, yet
+        rtc = null;
+
+        sc.close(); // if it hasn't been, yet
+        sc = null;
+
+        update({
+          status: 'complete'
+        });
+      }
+    }
+  });
 
   // Signal Channel setup
 
