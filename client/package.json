@@ -17,12 +17,9 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.21.3",
     "react-scripts": "^5.0.1",
-<<<<<<< Updated upstream
     "serve": "^14.2.1",
-=======
     "tailwind-merge": "^2.2.2",
     "tailwindcss-animate": "^1.0.7",
->>>>>>> Stashed changes
     "webpack": "^5.91.0",
     "webpack-cli": "^5.1.4"
   },
