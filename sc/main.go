@@ -1,9 +1,15 @@
 package main
 
 import (
-	"fmt"
+	"sc/agent"
+	"log"
+	"net/http"
 )
 
 func main() {
-	fmt.Printf("Droppr Signal Channel\n")
+	var a agent.Agent
+	a.Init()
+
+	http.HandleFunc("/ping", a.ServePing)
+	log.Fatal(http.ListenAndServe(":5050", nil))
 }
