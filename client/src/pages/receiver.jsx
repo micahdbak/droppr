@@ -5,12 +5,14 @@ import React, { useState, useEffect } from 'react';
 import * as droppr from '../interface';
 
 const statusInterval = 100; // 100ms
+const MB = 1000 * 1024;
 
 export function Receiver(props) {
   //const [view, setView] = useState('droppr'); //use for header
   const [status, setStatus] = useState('Waiting...');
   const [downloadHref, setDownloadHref] = useState('');
   const [downloadName, setDownloadName] = useState('');
+  const [lastBytes, setLastBytes] = useState(0);
 
   const { id } = props;
 
@@ -18,13 +20,17 @@ export function Receiver(props) {
   useEffect(() => {
     // check statuses every 100ms
     const checkStatusInterval = setInterval(() => {
-      const bytes = droppr.getBytes();
-      const speed = droppr.getSpeed(); // Bpms == kBps
-      const size = droppr.getSize();
-      const percentage = Math.round((100 * bytes) / fileInfo.size);
+      setLastBytes(_lastBytes => {
+        const bytes = droppr.getBytes();
+        const size = droppr.getSize();
+        const percentage = ((100 * bytes) / size).toFixed(1);
+        const speed = (((bytes - _lastBytes) / statusInterval) / 1000).toFixed(1) // MBps
 
-      // set status to be a summary of received bytes
-      setStatus(`Received ${bytes} of ${size} bytes (${speed} kBps) (${percentage}%).`);
+        // set status to be a summary of received bytes
+        setStatus(`Received ${(bytes / MB).toFixed(1)} of ${(size / MB).toFixed(1)} MB (${speed} MBps) (${percentage}%).`);
+
+        return bytes; // update lastBytes
+      });
     }, statusInterval);
 
     // read transferid from URL
@@ -34,7 +40,10 @@ export function Receiver(props) {
         // stop updating status
         clearInterval(checkStatusInterval);
         setStatus('');
+
         if (update.download) {
+          console.log('got download');
+          console.log(update.download);
           setDownloadHref(update.download.href); // <a href={downloadHref}>... // set React state
           setDownloadName(update.download.name); // ...{downloadName}</a> // set React state
         }
