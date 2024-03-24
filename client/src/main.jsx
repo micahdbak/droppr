@@ -1,8 +1,8 @@
-import { Dropper, Receiver, Landing } from './pages';
+import { Dropper, Receiver, About } from './pages';
 import React, { useState, useEffect } from 'react';
 
 export function Main() {
-  const [view, setView] = useState('landing');
+  const [view, setView] = useState('drop');
   const [dropId, setDropId] = useState(null);
 
   useEffect(() => {
@@ -20,8 +20,8 @@ export function Main() {
     return <Dropper />;
   } else if (view === 'receiver') {
     return <Receiver id={dropId} />;
-  } else if (view === 'landing') {
-    return <Landing />;
+  } else if (view === 'about') {
+    return <About />;
   } else {
     return <p>404</p>;
   }

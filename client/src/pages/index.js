@@ -1,3 +1,3 @@
-export * from './receiver.jsx';
+export * from './about.jsx';
 export * from './dropper.jsx';
-export * from './landing.jsx';
+export * from './receiver.jsx';
