@@ -157,15 +157,18 @@ export function drop(file, update) {
       console.log(message);
 
       if (message.type === 'received') {
-        console.log('hello?');
-        dc.close(); // if it hasn't been, yet
-        dc = null;
+        try {
+          dc.close(); // if it hasn't been, yet
+          dc = null;
 
-        rtc.close(); // if it hasn't been, yet
-        rtc = null;
+          rtc.close(); // if it hasn't been, yet
+          rtc = null;
 
-        sc.close(); // if it hasn't been, yet
-        sc = null;
+          sc.close(); // if it hasn't been, yet
+          sc = null;
+        } catch (err) {
+          // pass
+        }
 
         update({
           status: 'complete'
