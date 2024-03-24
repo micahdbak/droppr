@@ -1,9 +1,7 @@
-// receiver App
-
 import React, { useState, useEffect } from 'react';
 
-import * as droppr from '../interface';
 import { Header } from '../components';
+import * as droppr from '../interface';
 
 const statusInterval = 100; // 100ms
 const MB = 1000 * 1024;
@@ -21,7 +19,7 @@ export function Receiver(props) {
   useEffect(() => {
     // check statuses every 100ms
     const checkStatusInterval = setInterval(() => {
-      setLastBytes(_lastBytes => {
+      setLastBytes((_lastBytes) => {
         const bytes = droppr.getBytes();
         const size = droppr.getSize();
         const percentage = ((100 * bytes) / size).toFixed(1);
@@ -33,7 +31,7 @@ export function Receiver(props) {
           `Received ${(bytes / MB).toFixed(2)} of ${(size / MB).toFixed(2)} MB (${speed} MBps) ${percent}`
         );
 
-        return bytes; // update lastBytes
+        return bytes;
       });
 
       const name = droppr.getName();
@@ -44,7 +42,6 @@ export function Receiver(props) {
     }, statusInterval);
 
     // read transferid from URL
-
     if (id) {
       droppr.receive(id, (update) => {
         // stop updating status
@@ -59,14 +56,13 @@ export function Receiver(props) {
           setDownloadStatus('');
         }
 
-        setStatus(update.status); // set React state
+        setStatus(update.status);
       });
     } else {
       // pass
     }
 
     return () => {
-      // clear intervals
       clearInterval(checkStatusInterval);
     };
   }, []);
