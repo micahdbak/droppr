@@ -1,11 +1,97 @@
 // interface/
 // dropper.js
 
-import { wsRoot, _setStatus } from './helpers.js';
+import { sleep, wsRoot, _blobSize, _maxBufferedAmount, _rtcConfiguration, _setBytes, _setStatus } from './helpers.js';
 
 let rtc = null; // WebRTC connection
 let sc = null; // Signal Channel WebSocket connection
 let dc = null; // the data channel
+
+let _update = () => {};
+
+let isSendingFile = false;
+
+// drop all blobs for a file
+async function dropFile(file) {
+  isSendingFile = true;
+
+  try {
+    let start = 0;
+
+    while (start < file.size) {
+      // check if the buffered amount exceeds an arbitrary max
+      if (rtc.connectionState !== 'connected') {
+        do {
+          sleep(100); // 100ms
+        } while (rtc.connectionState !== 'connected');
+      } else if (dc.bufferedAmount > _maxBufferedAmount) {
+        // wait for it to be flushed halfway
+        do {
+          _setBytes(start - dc.bufferedAmount);
+          await sleep(5); // 5ms
+        } while (dc.bufferedAmount > 0);
+      }
+
+      // calculate the end of the next slice
+      const end = start + _blobSize > file.size ? file.size : start + _blobSize;
+
+      // make blob and reader for writing to WebSocket
+      let blob = file.slice(start, end);
+      let reader = blob.stream().getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        // send the Uint8Array as binary data through the Data Channel
+        dc.send(value);
+      }
+
+      // explicitly free these
+      reader = null;
+      blob = null;
+
+      start += _blobSize;
+      _setBytes(start - dc.bufferedAmount);
+    }
+  } catch (err) {
+    console.log('Caught an error in dropFile:');
+    console.log(err);
+
+    return;
+  }
+
+  _setBytes(file.size);
+
+  // no more data to send
+  dc.send('{"type":"complete"}');
+
+  isSendingFile = false;
+}
+
+function onMessage(event) {
+  if (typeof event.data === 'string') {
+    const message = JSON.parse(event.data);
+
+    if (message.type === 'received') {
+      dc.close(); // if it hasn't been, yet
+      dc = null;
+
+      rtc.close(); // if it hasn't been, yet
+      rtc = null;
+
+      sc.close(); // if it hasn't been, yet
+      sc = null;
+
+      _update({
+        status: 'complete'
+      });
+    }
+  }
+}
 
 export function drop(file, update) {
   if (rtc !== null || sc !== null || dc !== null) {
@@ -14,7 +100,7 @@ export function drop(file, update) {
 
   // WebRTC setup
 
-  rtc = new RTCPeerConnection(); // prepare the browser for RTC
+  rtc = new RTCPeerConnection(_rtcConfiguration); // prepare the browser for RTC
 
   rtc.addEventListener('connectionstatechange', (event) => {
     console.log('WebRTC connection state change:');
@@ -27,6 +113,27 @@ export function drop(file, update) {
     // close
     if (rtc.connectionState === 'closed') {
       rtc = null;
+    }
+  });
+
+  rtc.addEventListener('iceconnectionstatechange', async (event) => {
+    console.log('WebRTC ICE connection state change:');
+    console.log(rtc.iceConnectionState);
+
+    update({
+      status: rtc.iceConnectionState,
+    });
+
+    if (rtc.iceConnectionState === 'failed') {
+      const offer = await rtc.createOffer({ iceRestart: true });
+      rtc.setLocalDescription(offer);
+
+      const packet = {
+        type: 'offer',
+        offer,
+      };
+
+      sc.send(JSON.stringify(packet));
     }
   });
 
@@ -50,7 +157,23 @@ export function drop(file, update) {
 
   dc.addEventListener('open', () => {
     console.log('DC opened!');
+
+    const packet = {
+      type: 'inform',
+      fileInfo: {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      }
+    };
+
+    dc.send(JSON.stringify(packet));
+
+    // drop the file
+    dropFile(file);
   });
+
+  dc.addEventListener('message', onMessage);
 
   // Signal Channel setup
 

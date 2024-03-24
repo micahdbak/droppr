@@ -4,12 +4,14 @@ import * as droppr from '../interface';
 import { Header } from '../components/index';
 
 const statusInterval = 100; // 100ms
+const MB = 1000 * 1024;
 
 export function Dropper() {
   const [bytes, setBytes] = useState(0);
   const [file, setFile] = useState(null);
   const [fileInfo, setFileInfo] = useState({});
   const [isDropping, setIsDropping] = useState(false);
+  const [lastBytes, setLastBytes] = useState(0);
   const [recipientHref, setRecipientHref] = useState('');
   const [status, setStatus] = useState('');
   const [transferid, setTransferid] = useState('');
@@ -19,9 +21,9 @@ export function Dropper() {
     const newFile = event.target.files[0];
     if (newFile) {
       setFileInfo({
-        name: droppr.getName(),
-        size: droppr.getSize(),
-        type: newFile.type, //no getType function in droppr.js
+        name: newFile.name,
+        size: newFile.size,
+        type: newFile.type,
       });
 
       setFile(newFile);
@@ -58,14 +60,15 @@ export function Dropper() {
   // update statuses (typically every 100ms)
   useEffect(() => {
     if (isDropping) {
-      const speed = droppr.getSpeed(); // 8Bpms == kBps
-      const percentage = Math.round((100 * bytes) / fileInfo.size);
+      const percentage = ((100 * bytes) / fileInfo.size).toFixed(1);
+      const speed = (((bytes - lastBytes) / statusInterval) / 1000).toFixed(1) // MBps
 
       if (bytes === 0) {
         setStatus('Waiting...');
       } else {
-        setStatus(`Dropped ${bytes} of ${fileInfo.size} bytes (${speed} kBps) (${percentage}%).`);
+        setStatus(`Dropped ${(bytes / MB).toFixed(1)} of ${(fileInfo.size / MB).toFixed(1)} MBs (${speed} MBps) (${percentage}%).`);
       }
+      setLastBytes(bytes);
     }
   }, [bytes, fileInfo, isDropping]);
 

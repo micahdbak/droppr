@@ -1,20 +1,67 @@
 // interface/
 // receive.js
 
-import { wsRoot, _setStatus } from './helpers.js';
+import { wsRoot, _setBytes, _setStatus, _rtcConfiguration, _setName, _setSize, _setType } from './helpers.js';
 
 let rtc = null; // WebRTC connection
 let sc = null; // Signal Channel WebSocket connection
 let dc = null; // the data channel
+
+let blob = new Blob();
+let fileInfo = {};
+
+let _update = () => {};
+
+function onMessage(event) {
+  if (typeof event.data === 'string') {
+    const message = JSON.parse(event.data);
+
+    if (message.type === 'inform') {
+      // retrieve file info
+      fileInfo = message.fileInfo;
+
+      _setName(fileInfo.name);
+      _setSize(fileInfo.size);
+      _setType(fileInfo.type);
+    } else if (message.type === 'complete') {
+      // create downloadable URL for the object
+      const href = URL.createObjectURL(new Blob([blob], { type: fileInfo.type }));
+      blob = null; // garbage
+
+      dc.send('{"type":"received"}');
+      dc.close();
+      dc = null;
+
+      _update({
+        status: 'complete',
+        download: {
+          href,
+          ...fileInfo // name, size, type
+        }
+      });
+
+      rtc.close();
+      rtc = null;
+    } else {
+      // pass
+    }
+  } else {
+    // continue building the blob
+    blob = new Blob([blob, event.data]);
+    _setBytes(blob.size);
+  }
+}
 
 export function receive(id, update) {
   if (rtc !== null || sc !== null) {
     return; // no two workers at the same time, please
   }
 
+  _update = update;
+
   // WebRTC setup
 
-  rtc = new RTCPeerConnection(); // prepare the browser for RTC
+  rtc = new RTCPeerConnection(_rtcConfiguration); // prepare the browser for RTC
 
   rtc.addEventListener('connectionstatechange', (event) => {
     console.log('WebRTC connection state change:');
@@ -50,6 +97,11 @@ export function receive(id, update) {
     dc.addEventListener('open', () => {
       console.log('DC opened!');
     });
+
+    dc.addEventListener('message', onMessage);
+
+    sc.close();
+    sc = null;
   });
 
   // Signal Channel setup
