@@ -5,50 +5,49 @@ import * as droppr from '../interface';
 const statusInterval = 100; // 100ms
 
 export function Dropper() {
-    const [bytes, setBytes] = useState(0);
-    const [file, setFile] = useState(null);
-    const [fileInfo, setFileInfo] = useState({});
-    const [isDropping, setIsDropping] = useState(false);
-    const [recipientHref, setRecipientHref] = useState('');
-    const [status, setStatus] = useState('');
-    const [transferid, setTransferid] = useState('');
+  const [bytes, setBytes] = useState(0);
+  const [file, setFile] = useState(null);
+  const [fileInfo, setFileInfo] = useState({});
+  const [isDropping, setIsDropping] = useState(false);
+  const [recipientHref, setRecipientHref] = useState('');
+  const [status, setStatus] = useState('');
+  const [transferid, setTransferid] = useState('');
 
-    //setting file info
-    function handleFile(event) {
-        const newFile = event.target.files[0];
-        if (newFile) {
-            setFileInfo = ({
-                name: droppr.getName(),
-                size: droppr.getSize(),
-                type: newFile.type, //no getType function in droppr.js
-            });
-            
-            setFile(newFile);
-            setStatus('File is read to drop.');
-        }
+  //setting file info
+  function handleFile(event) {
+    const newFile = event.target.files[0];
+    if (newFile) {
+      setFileInfo = {
+        name: droppr.getName(),
+        size: droppr.getSize(),
+        type: newFile.type, //no getType function in droppr.js
+      };
+
+      setFile(newFile);
+      setStatus('File is read to drop.');
+    }
+  }
+
+  //handing dropping files ()
+  function handleDrop() {
+    if (file === null) {
+      setStatus('Please upload a file.');
+      return;
     }
 
-    //handing dropping files ()
-    function handleDrop() {
-        if (file === null) {
-            setStatus('Please upload a file.');
-            return;
-        }
+    setIsDropping(true);
 
-        setIsDropping(true);
+    droppr.drop(file, (update) => {
+      setFile(null);
+      // if it provides the id attribute
+      if (update.id) setTransferid(update.id);
 
-        droppr.drop(file, (update) => {
-            setFile(null);
-            // if it provides the id attribute
-            if (update.id) 
-                setTransferid(update.id);
+      // update status based on what was given in this update
+      setStatus(update.status);
 
-            // update status based on what was given in this update
-            setStatus(update.status);
-
-            // various other attributes might be given in update
-        });
-    }
+      // various other attributes might be given in update
+    });
+  }
 
   // update statuses (typically every 100ms)
   useEffect(() => {
@@ -68,7 +67,6 @@ export function Dropper() {
   useEffect(() => {
     // every 100ms
     const checkStatusInterval = setInterval(() => {
-
       if (transferid === '') {
         setRecipientHref('');
       } else {
@@ -98,4 +96,3 @@ export function Dropper() {
     </div>
   );
 }
-

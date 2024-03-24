@@ -16,9 +16,9 @@ export function Main() {
   }, []);
 
   if (view === 'dropper') {
-    return <Dropper />
+    return <Dropper />;
   } else if (view === 'receiver') {
-    return <Receiver id={dropId} />
+    return <Receiver id={dropId} />;
   } else {
     return <p>404</p>;
   }

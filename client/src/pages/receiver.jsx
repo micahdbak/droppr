@@ -5,7 +5,7 @@ export function Receiver(props) {
 
   return (
     <div>
-      <p1>Reciever Page</p1>
+      <p1 className="text-3xl">Reciever Page</p1>
     </div>
   );
 }

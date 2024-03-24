@@ -14,6 +14,9 @@
     "clsx": "^2.1.0",
     "css-loader": "^6.10.0",
     "lucide-react": "^0.363.0",
+    "postcss": "^8.4.38",
+    "postcss-loader": "^8.1.1",
+    "postcss-preset-env": "^9.5.2",
     "prettier": "^3.2.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -41,7 +44,7 @@
     "prebuild": "rm -Rf build",
     "build": "webpack --mode production",
     "postbuild": "cp -Rf public/* build",
-    "format": "prettier --write **/*.js",
+    "format": "prettier --write .",
     "prestart": "npm run format && npm run build",
     "start": "serve build"
   },

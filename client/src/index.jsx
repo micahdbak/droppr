@@ -1,8 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
+import './tailwind.css';
 
-import { Main } from './main.jsx'
+import { Main } from './main.jsx';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
