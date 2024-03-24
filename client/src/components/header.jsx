@@ -1,6 +1,10 @@
 import React from 'react';
 
 export function Header() {
+  function onDrop() {
+    location.href = '/?view=drop';
+  }
+
   return (
     <div>
       <nav className="bg-neutral-50 border-neutral-200">
@@ -12,7 +16,10 @@ export function Header() {
             <button className="mr-8 font-medium rounded-md bg-neutral-100 hover:bg-neutral-200 hover:cursor-pointer px-4 py-3 transition ease-in-out hover:scale-110">
               Receive
             </button>
-            <button className="mr-24 font-medium rounded-md bg-neutral-100 hover:bg-neutral-200 hover:cursor-pointer px-4 py-3 transition ease-in-out hover:scale-110">
+            <button
+              className="mr-24 font-medium rounded-md bg-neutral-100 hover:bg-neutral-200 hover:cursor-pointer px-4 py-3 transition ease-in-out hover:scale-110"
+              onClick={onDrop}
+            >
               Drop
             </button>
           </div>

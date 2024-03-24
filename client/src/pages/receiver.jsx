@@ -30,7 +30,6 @@ export function Receiver(props) {
     // read transferid from URL
 
     if (id) {
-
       droppr.receive(id, (update) => {
         // stop updating status
         clearInterval(checkStatusInterval);
@@ -39,7 +38,7 @@ export function Receiver(props) {
           setDownloadHref(update.download.href); // <a href={downloadHref}>... // set React state
           setDownloadName(update.download.name); // ...{downloadName}</a> // set React state
         }
- 
+
         setStatus(update.status); // set React state
       });
     } else {

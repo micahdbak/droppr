@@ -11,10 +11,12 @@ export function Main() {
     if (searchParams.has('id')) {
       setDropId(searchParams.get('id'));
       setView('receiver');
+    } else if (searchParams.has('view')) {
+      setView(searchParams.get('view'));
     }
   }, []);
 
-  if (view === 'dropper') {
+  if (view === 'drop') {
     return <Dropper />;
   } else if (view === 'receiver') {
     return <Receiver id={dropId} />;
