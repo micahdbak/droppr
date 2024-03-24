@@ -17,11 +17,11 @@ export function Dropper() {
   function handleFile(event) {
     const newFile = event.target.files[0];
     if (newFile) {
-      setFileInfo = {
+      setFileInfo({
         name: droppr.getName(),
         size: droppr.getSize(),
         type: newFile.type, //no getType function in droppr.js
-      };
+      });
 
       setFile(newFile);
       setStatus('File is read to drop.');
@@ -41,8 +41,11 @@ export function Dropper() {
 
     droppr.drop(file, (update) => {
       setFile(null);
+
       // if it provides the id attribute
-      if (update.id) setTransferid(update.id);
+      if (update.id) {
+        setTransferid(update.id);
+      }
 
       // update status based on what was given in this update
       setStatus(update.status);
@@ -69,12 +72,6 @@ export function Dropper() {
   useEffect(() => {
     // every 100ms
     const checkStatusInterval = setInterval(() => {
-      if (transferid === '') {
-        setRecipientHref('');
-      } else {
-        setRecipientHref(`receive?transferid=${transferid}`);
-      }
-
       // trigger status update (see above effect)
       setBytes(droppr.getBytes());
     }, statusInterval);
@@ -94,7 +91,7 @@ export function Dropper() {
       </button>
       <br />
       <p>{status}</p>
-      {recipientHref !== '' ? <a href={recipientHref}>Recipient link ({recipientHref})</a> : []}
+      <p>?id={transferid}</p>
     </div>
   );
 }
