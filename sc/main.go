@@ -14,5 +14,7 @@ func main() {
 	a.Init()
 
 	http.HandleFunc("/ping", a.ServePing)
+	http.HandleFunc("/drop", a.ServeDropper)
+	http.HandleFunc("/receive/", a.ServeRecipient)
 	log.Fatal(http.ListenAndServe(":5050", nil))
 }
