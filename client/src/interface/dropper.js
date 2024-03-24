@@ -4,28 +4,31 @@
 import { wsRoot, _setStatus } from './helpers.js';
 
 let rtc = null; // WebRTC connection
-let scWs = null; // Signal Channel WebSocket connection
+let sc = null; // Signal Channel WebSocket connection
 let dc = null; // the data channel
 
 export function drop(file, update) {
-  if (rtc !== null || scWs !== null) {
+  if (rtc !== null || sc !== null || dc !== null) {
     return; // no two workers at the same time, please
   }
+
+  // WebRTC setup
 
   rtc = new RTCPeerConnection(); // prepare the browser for RTC
 
   rtc.addEventListener('connectionstatechange', (event) => {
-    console.log('Connection State Change');
-    console.log(event);
+    console.log('WebRTC connection state change:');
+    console.log(rtc.connectionState);
+
+    update({
+      status: rtc.connectionState,
+    });
+
+    // close
+    if (rtc.connectionState === 'closed') {
+      rtc = null;
+    }
   });
-
-  dc = rtc.createDataChannel('Droppr Data Channel');
-
-  dc.addEventListener('open', () => {
-    console.log('DC opened!');
-  });
-
-  scWs = new WebSocket(wsRoot + '/drop'); // route for creating a new drop
 
   rtc.addEventListener('icecandidate', (event) => {
     if (event.candidate !== null) {
@@ -37,29 +40,28 @@ export function drop(file, update) {
         candidate: event.candidate,
       };
 
-      scWs.send(JSON.stringify(packet));
+      sc.send(JSON.stringify(packet));
     }
   });
 
-  console.log(rtc.connectionState);
+  // Data Channel setup
 
-  // ping the socket every second
-  let checkIfReady = setInterval(() => {
-    // don't send a message through an unopened WebSocket
-    if (!scWs || scWs.readyState !== 1) {
-      return;
-    }
+  dc = rtc.createDataChannel('droppr'); // data channel for sending files
 
-    // send a test message
-    scWs.send('{"type":"test"}');
-  }, 1000);
+  dc.addEventListener('open', () => {
+    console.log('DC opened!');
+  });
 
-  scWs.addEventListener('close', () => {
-    scWs = null; // set the WebSocket connection to null
+  // Signal Channel setup
+
+  sc = new WebSocket(wsRoot + '/drop'); // route for creating a new drop
+
+  sc.addEventListener('close', () => {
+    sc = null; // set the WebSocket connection to null
   });
 
   // on every message received from the server
-  scWs.addEventListener('message', async (event) => {
+  sc.addEventListener('message', async (event) => {
     const message = JSON.parse(event.data); // parse JSON
 
     // the drop was successfully registered
@@ -74,9 +76,6 @@ export function drop(file, update) {
 
     // the recipient has connected to the server, and is waiting for our WebRTC offer
     if (message.status === 'ready') {
-      // stop sending test messages
-      clearInterval(checkIfReady);
-
       // create WebRTC offer
       const offer = await rtc.createOffer();
       rtc.setLocalDescription(offer);
@@ -86,7 +85,7 @@ export function drop(file, update) {
         offer,
       };
 
-      scWs.send(JSON.stringify(packet));
+      sc.send(JSON.stringify(packet));
     }
 
     if (message.type === 'answer') {

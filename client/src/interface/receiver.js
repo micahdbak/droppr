@@ -4,19 +4,42 @@
 import { wsRoot, _setStatus } from './helpers.js';
 
 let rtc = null; // WebRTC connection
-let scWs = null; // Signal Channel WebSocket connection
+let sc = null; // Signal Channel WebSocket connection
 let dc = null; // the data channel
 
 export function receive(id, update) {
-  if (rtc !== null || scWs !== null) {
+  if (rtc !== null || sc !== null) {
     return; // no two workers at the same time, please
   }
+
+  // WebRTC setup
 
   rtc = new RTCPeerConnection(); // prepare the browser for RTC
 
   rtc.addEventListener('connectionstatechange', (event) => {
-    console.log('Connection State Change');
-    console.log(event);
+    console.log('WebRTC connection state change:');
+    console.log(rtc.connectionState);
+
+    update({
+      status: rtc.connectionState,
+    });
+
+    // close
+    if (rtc.connectionState === 'closed') {
+      rtc = null;
+    }
+  });
+
+  rtc.addEventListener('icecandidate', (event) => {
+    console.log('Got ICE candidate:');
+    console.log(event.candidate);
+
+    const packet = {
+      type: 'candidate',
+      candidate: event.candidate,
+    };
+
+    sc.send(JSON.stringify(packet));
   });
 
   rtc.addEventListener('datachannel', (event) => {
@@ -29,25 +52,15 @@ export function receive(id, update) {
     });
   });
 
-  scWs = new WebSocket(wsRoot + `/receive/${id}`);
+  // Signal Channel setup
 
-  rtc.addEventListener('icecandidate', (event) => {
-    console.log('Got ICE candidate:');
-    console.log(event.candidate);
+  sc = new WebSocket(wsRoot + `/receive/${id}`);
 
-    const packet = {
-      type: 'candidate',
-      candidate: event.candidate,
-    };
-
-    scWs.send(JSON.stringify(packet));
+  sc.addEventListener('close', () => {
+    sc = null; // set the WebSocket connection to null
   });
 
-  scWs.addEventListener('close', () => {
-    scWs = null; // set the WebSocket connection to null
-  });
-
-  scWs.addEventListener('message', async (event) => {
+  sc.addEventListener('message', async (event) => {
     const message = JSON.parse(event.data);
 
     if (message.type === 'test') {
@@ -69,7 +82,7 @@ export function receive(id, update) {
         answer,
       };
 
-      scWs.send(JSON.stringify(packet));
+      sc.send(JSON.stringify(packet));
     }
 
     if (message.type === 'candidate') {
