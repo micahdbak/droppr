@@ -3,11 +3,7 @@ import { Header } from '../components/header.jsx';
 import Container from '@mui/material/Container';
 import Fab from '@mui/material/Fab';
 
-export function Landing() {
-  function onDrop() {
-    location.href = '/?view=drop';
-  }
-
+export function About() {
   return (
     <body className="min-h-screen bg-gradient-to-b from-violet-900 to-gray-300">
       <div>
@@ -43,19 +39,9 @@ export function Landing() {
                   color="secondary"
                   className="hover:scale-110 transition ease-in-out"
                   size="xl"
-                  onClick={onDrop}
+                  onClick={() => { location.href = '/?view=drop'}}
                 >
                   Drop
-                </Fab>
-              </li>
-              <li className="align-middle pl-8 my-4">
-                <Fab
-                  variant="extended"
-                  color="secondary"
-                  className="hover:scale-110 transition ease-in-out"
-                  size="xl"
-                >
-                  Receive
                 </Fab>
               </li>
             </ul>
