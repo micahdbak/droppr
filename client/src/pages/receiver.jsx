@@ -33,12 +33,6 @@ export function Receiver(props) {
 
         return bytes;
       });
-
-      const name = droppr.getName();
-      const size = droppr.getSize();
-      const type = droppr.getType();
-
-      setFileInfo({ name, size, type });
     }, statusInterval);
 
     // read transferid from URL
@@ -47,6 +41,10 @@ export function Receiver(props) {
         // stop updating status
         clearInterval(checkStatusInterval);
         setStatus('');
+
+        if (update.fileInfo) {
+          setFileInfo(update.fileInfo);
+        }
 
         if (update.download) {
           console.log('got download');

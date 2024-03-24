@@ -13,7 +13,7 @@ export function Dropper() {
   const [isDropping, setIsDropping] = useState(false);
   const [status, setStatus] = useState('');
   const [downloadStatus, setDownloadStatus] = useState('');
-  const [transferid, setTransferid] = useState('');
+  const [transferid, setTransferid] = useState(-1);
   const [isDragging, setIsDragging] = useState(false);
 
   // setting file info
@@ -25,8 +25,9 @@ export function Dropper() {
         size: newFile.size,
         type: newFile.type,
       });
+
       setFile(newFile);
-      setStatus('File is ready to drop.');
+      setStatus('registering');
     }
   };
 
@@ -57,6 +58,10 @@ export function Dropper() {
         // if it provides the id attribute
         if (update.id) {
           setTransferid(update.id);
+        }
+
+        if (update.status === 'connected') {
+          setTransferid(-1);
         }
 
         // nak
@@ -154,7 +159,9 @@ export function Dropper() {
           <p className='font-semibold'>{fileInfo.name}</p>
           <p>{(fileInfo.size / 1024).toFixed(1)} kB</p>
           <br />
-          <a href={`/?id=${transferid}`} className='text-blue-500'>Share this link with the intended recipient.</a>
+          {transferid >= 0 ? (
+            <a href={`/?id=${transferid}`} className='text-blue-500'>Share this link with the intended recipient.</a>
+          ) : []}
           <br />
           <p className='text-slate-500'>{status}</p>
           <p className='text-slate-500'>{downloadStatus}</p>
