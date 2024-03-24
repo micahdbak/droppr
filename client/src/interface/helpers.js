@@ -3,7 +3,7 @@
 
 // constants
 
-const wsRoot = 'wss://sc.droppr.net';
+const wsRoot = 'ws://localhost:5050'; //'wss://sc.droppr.net';
 const _blobSize = 256 * 1024; // 256 kB
 const _maxBufferedAmount = 1000 * 1024; // 1 MB
 const _rtcConfiguration = {

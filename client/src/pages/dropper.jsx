@@ -73,7 +73,6 @@ export function Dropper() {
         // update status based on update
         setStatus(update.status);
       });
-
     }
   };
 
