@@ -30,10 +30,12 @@ export function Dropper() {
 
   //handing dropping files ()
   function handleDrop() {
+    /*
     if (file === null) {
       setStatus('Please upload a file.');
       return;
     }
+    */
 
     setIsDropping(true);
 
