@@ -13,6 +13,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "^5.0.1",
+    "serve": "^14.2.1",
     "webpack": "^5.91.0",
     "webpack-cli": "^5.1.4"
   },
@@ -36,6 +37,7 @@
     "prebuild": "npm run format",
     "build": "react-scripts build",
     "postbuild": "npm run build-workers",
-    "start": "react-scripts start"
+    "start": "react-scripts start",
+    "serve": "serve build"
   }
 }
