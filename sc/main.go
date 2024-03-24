@@ -1,12 +1,15 @@
 package main
 
 import (
-	"sc/agent"
+	"fmt"
 	"log"
 	"net/http"
+	"sc/agent"
 )
 
 func main() {
+	fmt.Printf("Droppr.\n")
+
 	var a agent.Agent
 	a.Init()
 
