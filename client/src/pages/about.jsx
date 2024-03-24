@@ -1,5 +1,5 @@
 import React from 'react';
-import { Header } from '../components/header.jsx';
+import { Header, Footer } from '../components/index.js';
 import Container from '@mui/material/Container';
 import Fab from '@mui/material/Fab';
 import box_img from "../assests/box.png"
@@ -22,6 +22,7 @@ export function About() {
         <p>More to come...</p>
       </div>
 
+      <Footer/>
     </div>
   );
 }

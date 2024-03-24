@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-import { Header } from '../components';
+import { Header, Footer } from '../components/index.js';
 import * as droppr from '../interface';
 
 const statusInterval = 100; // 100ms
@@ -94,6 +94,7 @@ export function Receiver(props) {
         <p className='text-slate-500'>{status}</p>
         { download.href === undefined ? <p className='text-slate-500'>{downloadStatus}</p> : []}
       </div>
+      <Footer/>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as droppr from '../interface';
-import { Header } from '../components';
+import { Header, Footer } from '../components/index.js';
+
 
 const statusInterval = 100; // 100ms
 const MB = 1000 * 1024;
@@ -160,6 +161,7 @@ export function Dropper() {
           <p className='text-slate-500'>{downloadStatus}</p>
         </div>
       )}
+      <Footer/>
     </div>
   );
 }
