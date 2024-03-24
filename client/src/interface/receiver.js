@@ -8,7 +8,7 @@ export function receive(id, update) {
     return; // no two workers at the same time, please
   }
 
-  receiverWorker = new Worker('/workers/receiver.js');
+  receiverWorker = new Worker('/js/receiver.js');
   receiverWorker.postMessage(id); // give the worker the drop identifier
 
   receiverWorker.addEventListener('error', (event) => {

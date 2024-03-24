@@ -8,7 +8,7 @@ export function drop(file, update) {
     return; // no two workers at the same time, please
   }
 
-  dropperWorker = new Worker('/workers/dropper.js');
+  dropperWorker = new Worker('/js/dropper.js');
   dropperWorker.postMessage(file); // give the worker the file
 
   dropperWorker.addEventListener('error', (event) => {

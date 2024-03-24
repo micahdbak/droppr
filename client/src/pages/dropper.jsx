@@ -1,10 +1,10 @@
-import React, {useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
-import * as droppr from '..droppr.js';
+import * as droppr from '../interface';
 
-const statusInterval = 100;
+const statusInterval = 100; // 100ms
 
-export function App() {
+export function Dropper() {
     const [bytes, setBytes] = useState(0);
     const [file, setFile] = useState(null);
     const [fileInfo, setFileInfo] = useState({});

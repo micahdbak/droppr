@@ -53,6 +53,33 @@
  *
  * function getName() ; returns string
  * - Get the name of the file being dropped, or received; should be checked routinely for updates.
+ *
+ * Example App:
+ *
+ * export function App() {
+ *   const [status, setStatus] = useState('');
+ * 
+ *   function onDrop() {
+ *     console.log('Drop clicked');
+ *     droppr.drop('this is a file :wink:', (update) => {
+ *       console.log(update);
+ *     });
+ *   }
+ * 
+ *   function onReceive() {
+ *     console.log('Receive clicked');
+ *     droppr.receive('drop identifier', (update) => {
+ *       console.log(update);
+ *     });
+ *   }
+ * 
+ *   return (
+ *     <>
+ *       <button onClick={onDrop}>Drop</button>
+ *       <button onClick={onReceive}>Receive</button>
+ *     </>
+ *   );
+ * }
  */
 
 console.log('Droppr. All rights reserved.');
