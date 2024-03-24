@@ -15,45 +15,13 @@ export function About() {
       </div>
 
       <div className='flex items-center justify-center m-8'>
-        <img src={box_img} className='w-52'></img>
+        <img src={box_img} className='w-52 rounded-xl '></img>
       </div>
 
+      <div className='flex items-center justify-center m-12'>
+        <p></p>
+      </div>
 
-{/* 
-      <div className="flex align-middle item-center justify-center mt-16">
-        <div>
-          <Container maxWidth="xs" className="shadow-2xl bg-white">
-            <ul>
-              <li>
-                <p className="text-xl align-middle font-bold text-violet-950">Simply transfer.</p>
-              </li>
-              <li>
-                <p>
-                  Droppr allows you to easily and quickly transfer files between devices, for free.
-                </p>
-              </li>
-            </ul>
-          </Container>
-        </div>
-
-        <div>
-          <ul className="flex flex-col items-center justify-center">
-            <li className="align-middle pl-8">
-              <Fab
-                variant="extended"
-                color="secondary"
-                className="hover:scale-110 transition ease-in-out"
-                size="xl"
-                onClick={() => {
-                  location.href = '/?view=drop';
-                }}
-              >
-                Drop
-              </Fab>
-            </li>
-          </ul>
-        </div>
-      </div> */}
     </div>
   );
 }
