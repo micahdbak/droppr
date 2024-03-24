@@ -86,7 +86,6 @@ export function Dropper() {
   return (
     <div>
       <Header />
-      <hr />
 
       <div>
         <input type="file" onChange={handleFile} />
