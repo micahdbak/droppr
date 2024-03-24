@@ -1,3 +1,7 @@
+// workers/
 // dropper.js
 
-console.log('dropper');
+onmessage = (event) => {
+  console.log('Dropper: got a message');
+  console.log(event.data);
+};

@@ -1,3 +1,7 @@
+// workers/
 // receiver.js
 
-console.log('receiver');
+onmessage = (event) => {
+  console.log('Receiver: got a message');
+  console.log(event.data);
+};
