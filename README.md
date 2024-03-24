@@ -2,6 +2,14 @@
 
 Simply transfer.
 
+## CAVEATS
+
+Droppr is very early in development.
+Be careful with using browsers other than Google Chrome or Safari, especially with files of large size (>1GB).
+If you want to be safe, run it in a VM.
+This can be a memory zipbomb.
+But, it's cool!
+
 ## Preamble
 
 ### Part A
