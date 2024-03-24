@@ -10,46 +10,6 @@ let dc = null; // the data channel
 let blob = new Blob();
 let fileInfo = {};
 
-function onMessage(event) {
-  if (typeof event.data === 'string') {
-    const message = JSON.parse(event.data);
-
-    if (message.type === 'inform') {
-      // retrieve file info
-      fileInfo = message.fileInfo;
-
-      _setName(fileInfo.name);
-      _setSize(fileInfo.size);
-      _setType(fileInfo.type);
-    } else if (message.type === 'complete') {
-      // create downloadable URL for the object
-      const href = URL.createObjectURL(new Blob([blob], { type: fileInfo.type }));
-      blob = null; // garbage
-
-      dc.send('{"type":"received"}');
-      dc.close();
-      dc = null;
-
-      update({
-        status: 'complete',
-        download: {
-          href,
-          ...fileInfo // name, size, type
-        }
-      });
-
-      rtc.close();
-      rtc = null;
-    } else {
-      // pass
-    }
-  } else {
-    // continue building the blob
-    blob = new Blob([blob, event.data]);
-    _setBytes(blob.size);
-  }
-}
-
 export function receive(id, update) {
   if (rtc !== null || sc !== null) {
     return; // no two workers at the same time, please

@@ -9,44 +9,43 @@ const MB = 1000 * 1024;
 export function Receiver(props) {
   const { id } = props;
 
+  const [bytes, setBytes] = useState(0);
   const [status, setStatus] = useState('waiting');
   const [downloadStatus, setDownloadStatus] = useState('');
   const [fileInfo, setFileInfo] = useState({});
   const [download, setDownload] = useState({});
   const [lastBytes, setLastBytes] = useState(0);
 
+  useEffect(() => {
+    console.log('update?');
+    const size = droppr.getSize();
+    const percentage = ((100 * bytes) / size).toFixed(1);
+    const speed = (((bytes - lastBytes) / statusInterval) / 1000).toFixed(1) // MBps
+    const percent = size ? `(${percentage}%).` : "";
+
+    // set status to be a summary of received bytes
+    setDownloadStatus(
+      `Received ${(bytes / MB).toFixed(2)} of ${(size / MB).toFixed(2)} MB (${speed} MBps) ${percent}`
+    );
+
+    setLastBytes(bytes);
+  }, [bytes, fileInfo]);
+
   // run on page load
   useEffect(() => {
     // check statuses every 100ms
     const checkStatusInterval = setInterval(() => {
-      setLastBytes((_lastBytes) => {
-        const bytes = droppr.getBytes();
-        const size = droppr.getSize();
-        const percentage = ((100 * bytes) / size).toFixed(1);
-        const speed = (((bytes - _lastBytes) / statusInterval) / 1000).toFixed(1) // MBps
-        const percent = size ? `(${percentage}%).` : "";
-
-        // set status to be a summary of received bytes
-        setDownloadStatus(
-          `Received ${(bytes / MB).toFixed(2)} of ${(size / MB).toFixed(2)} MB (${speed} MBps) ${percent}`
-        );
-
-        return bytes;
-      });
-
-      const name = droppr.getName();
-      const size = droppr.getSize();
-      const type = droppr.getType();
-
-      setFileInfo({ name, size, type });
+      setBytes(droppr.getBytes());
     }, statusInterval);
 
     // read transferid from URL
     if (id) {
       droppr.receive(id, (update) => {
-        // stop updating status
-        clearInterval(checkStatusInterval);
         setStatus('');
+
+        if (update.fileInfo) {
+          setFileInfo(update.fileInfo);
+        }
 
         if (update.download) {
           console.log('got download');
