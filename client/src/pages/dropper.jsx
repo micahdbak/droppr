@@ -29,6 +29,27 @@ export function Dropper() {
 
       setFile(newFile);
       setStatus('registering');
+      setIsDropping(true);
+
+      droppr.drop(newFile, (update) => {
+        // if it provides the id attribute
+        if (update.id) {
+          setTransferid(update.id);
+        }
+
+        if (update.status === 'connected') {
+          setTransferid(-1);
+        }
+
+        // nak
+        if (update.status === 'complete') {
+          setIsDropping(false);
+          setDownloadStatus('');
+        }
+
+        // update status based on update
+        setStatus(update.status);
+      });
     }
   };
 
@@ -52,7 +73,7 @@ export function Dropper() {
     }
 
     if (_file) {
-      setStatus('preparing');
+      setStatus('registering');
       setIsDropping(true);
 
       droppr.drop(_file, (update) => {
