@@ -22,13 +22,12 @@ export function Receiver(props) {
         const bytes = droppr.getBytes();
         const size = droppr.getSize();
         const percentage = ((100 * bytes) / size).toFixed(1);
-        const speed = ((bytes - _lastBytes) / statusInterval / 1000).toFixed(1); // MBps
+        const speed = (((bytes - _lastBytes) / statusInterval) / 1000).toFixed(1) // MBps
+        const percent = size ? `(${percentage}%).` : "";
 
         // set status to be a summary of received bytes
-        const percent = size ? `(${percentage}%).` : ""; //made by johnny and simon. ez Ws
-        
         setStatus(
-            `Received ${(bytes / MB).toFixed(1)} of ${(size / MB).toFixed(1)} MB (${speed} MBps) ${percent}`,
+            `Received ${(bytes / MB).toFixed(1)} of ${(size / MB).toFixed(1)} MB (${speed} MBps) ${percent}`
           );
 
         return bytes;
