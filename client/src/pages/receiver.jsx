@@ -3,18 +3,19 @@
 import React, { useState, useEffect } from 'react';
 
 import * as droppr from '../interface';
+import { Header } from '../components';
 
 const statusInterval = 100; // 100ms
 const MB = 1000 * 1024;
 
 export function Receiver(props) {
-  //const [view, setView] = useState('droppr'); //use for header
-  const [status, setStatus] = useState('Waiting...');
-  const [downloadHref, setDownloadHref] = useState('');
-  const [downloadName, setDownloadName] = useState('');
-  const [lastBytes, setLastBytes] = useState(0);
-
   const { id } = props;
+
+  const [status, setStatus] = useState('waiting');
+  const [downloadStatus, setDownloadStatus] = useState('');
+  const [fileInfo, setFileInfo] = useState({});
+  const [download, setDownload] = useState({});
+  const [lastBytes, setLastBytes] = useState(0);
 
   // run on page load
   useEffect(() => {
@@ -28,12 +29,18 @@ export function Receiver(props) {
         const percent = size ? `(${percentage}%).` : "";
 
         // set status to be a summary of received bytes
-        setStatus(
-            `Received ${(bytes / MB).toFixed(1)} of ${(size / MB).toFixed(1)} MB (${speed} MBps) ${percent}`
-          );
+        setDownloadStatus(
+          `Received ${(bytes / MB).toFixed(2)} of ${(size / MB).toFixed(2)} MB (${speed} MBps) ${percent}`
+        );
 
         return bytes; // update lastBytes
       });
+
+      const name = droppr.getName();
+      const size = droppr.getSize();
+      const type = droppr.getType();
+
+      setFileInfo({ name, size, type });
     }, statusInterval);
 
     // read transferid from URL
@@ -47,8 +54,9 @@ export function Receiver(props) {
         if (update.download) {
           console.log('got download');
           console.log(update.download);
-          setDownloadHref(update.download.href); // <a href={downloadHref}>... // set React state
-          setDownloadName(update.download.name); // ...{downloadName}</a> // set React state
+          setDownload(update.download);
+          clearInterval(checkStatusInterval);
+          setDownloadStatus('');
         }
 
         setStatus(update.status); // set React state
@@ -63,16 +71,33 @@ export function Receiver(props) {
     };
   }, []);
 
-  useEffect(() => {
-    console.log(downloadName);
-  }, [downloadName]);
-
   return (
-    <>
-      <p>{status}</p>
-      <a href={downloadHref} download={downloadName}>
-        Download
-      </a>
-    </>
+    <div>
+      <Header />
+      <div className="flex items-center justify-center my-10">
+        <p className="text-3xl font-light">Peer-to-peer ✨.</p>
+      </div>
+
+      {/* Drop-zone */}
+      <div className='flex flex-col flex-nowrap mx-auto w-3/4 h-3/4 items-center justify-center'>
+        <br />
+        <br />
+        <br />
+        <br />
+        <img src='/file.png' width='48px' height='48px' />
+        <br />
+        <p className='font-semibold'>{fileInfo.name}</p>
+        <p>{(droppr.getSize() / 1024).toFixed(1)} kB</p>
+        <br />
+        {fileInfo.name !== undefined ? (
+          <>
+            <a href={download.href} className={download.href ? 'text-blue-500' : 'text-slate-500'}>Download {fileInfo.name}.</a>
+            <br />
+          </>
+        ) : []}
+        <p className='text-slate-500'>{status}</p>
+        { download.href === undefined ? <p className='text-slate-500'>{downloadStatus}</p> : []}
+      </div>
+    </div>
   );
 }

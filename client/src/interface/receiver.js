@@ -105,6 +105,11 @@ export function receive(id, update) {
           _setName(fileInfo.name);
           _setSize(fileInfo.size);
           _setType(fileInfo.type);
+
+          update({
+            status: 'inform',
+            fileInfo
+          });
         } else if (message.type === 'complete') {
           // create downloadable URL for the object
           const href = URL.createObjectURL(new Blob([blob], { type: fileInfo.type }));

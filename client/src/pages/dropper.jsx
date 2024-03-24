@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as droppr from '../interface';
-import { Header } from '../components/index';
+import { Header } from '../components';
 
 const statusInterval = 100; // 100ms
 const MB = 1000 * 1024;
@@ -62,6 +62,7 @@ export function Dropper() {
         // nak
         if (update.status === 'complete') {
           setIsDropping(false);
+          setDownloadStatus('');
         }
 
         // update status based on update
@@ -96,7 +97,7 @@ export function Dropper() {
         setDownloadStatus('');
       } else {
         setDownloadStatus(
-          `Dropped ${(bytes / MB).toFixed(1)} of ${(fileInfo.size / MB).toFixed(1)} MB (${speed} MBps) (${percentage}%).`,
+          `Dropped ${(bytes / MB).toFixed(2)} of ${(fileInfo.size / MB).toFixed(2)} MB (${speed} MBps) (${percentage}%).`,
         );
       }
       setLastBytes(bytes);
@@ -118,7 +119,7 @@ export function Dropper() {
     <div>
       <Header />
       <div className="flex items-center justify-center my-10">
-        <p className="text-4xl font-light">Welcome to the Drop-Zone.</p>
+        <p className="text-3xl font-light">A new perspective for file transfer.</p>
       </div>
 
       {/* Drop-zone */}
