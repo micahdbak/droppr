@@ -1,0 +1,64 @@
+import React from 'react';
+import { Header } from '../components/header.jsx';
+import Container from '@mui/material/Container';
+import Fab from '@mui/material/Fab';
+
+export function Landing() {
+  return (
+    <body className="min-h-screen bg-gradient-to-b from-violet-900 to-gray-300">
+      <div>
+        <Header />
+        <div>
+          <Container maxWidth="lg" className="shadow-2xl p-12 m-4 bg-purple-950">
+            <p className="text-center text-7xl font-extrabold text-gray-50">welcome to droppr.</p>
+          </Container>
+        </div>
+
+        <div className="flex align-middle item-center justify-center mt-16">
+          <div>
+            <Container maxWidth="xs" className="shadow-2xl">
+              <ul>
+                <li>
+                  <p className="text-xl align-middle font-bold text-violet-950">
+                    A new way to transfer files.
+                  </p>
+                </li>
+                <li>
+                  <p>
+                    droppr allows you to easily and quickyl transfer files between devices, for
+                    free.
+                  </p>
+                </li>
+              </ul>
+            </Container>
+          </div>
+
+          <div>
+            <ul className="flex flex-col items-center justify-center">
+              <li className="align-middle pl-8">
+                <Fab
+                  variant="extended"
+                  color="secondary"
+                  className="hover:scale-110 transition ease-in-out"
+                  size="xl"
+                >
+                  drop
+                </Fab>
+              </li>
+              <li className="align-middle pl-8 my-4">
+                <Fab
+                  variant="extended"
+                  color="secondary"
+                  className="hover:scale-110 transition ease-in-out"
+                  size="xl"
+                >
+                  receive
+                </Fab>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </body>
+  );
+}

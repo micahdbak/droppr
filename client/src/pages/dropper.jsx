@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 import * as droppr from '../interface';
+import { Header } from '../components/index';
 
 const statusInterval = 100; // 100ms
 
@@ -83,12 +84,15 @@ export function Dropper() {
 
   return (
     <div>
-      <h1>Droppr.</h1>
-      <hr />
-      <input type="file" onChange={handleFile} />
-      <button type="button" onClick={handleDrop}>
-        Drop
-      </button>
+      <Header />
+
+      <div>
+        <input type="file" onChange={handleFile} />
+        <button type="button" onClick={handleDrop}>
+          Drop
+        </button>
+      </div>
+
       <br />
       <p>{status}</p>
       <p>?id={transferid}</p>
