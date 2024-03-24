@@ -43,14 +43,10 @@
     "prebuild": "npm run format",
     "build": "react-scripts build",
     "postbuild": "npm run build-workers",
-<<<<<<< Updated upstream
     "start": "react-scripts start",
     "serve": "serve build"
-=======
-    "start": "react-scripts start"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.1"
->>>>>>> Stashed changes
   }
 }
