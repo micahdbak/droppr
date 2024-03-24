@@ -91,8 +91,8 @@ func (a *Agent) ServeDropper(w http.ResponseWriter, r *http.Request) {
 	defer d.setDropper(nil)
 
 	// let the dropper know the drop identifier
-	idMsg := []byte(strconv.Itoa(d.Id))
-	sock.WriteMessage(ws.TextMessage, idMsg)
+	idMsg := fmt.Sprintf("{\"status\":\"registered\",\"id\":%d}", d.Id)
+	sock.WriteMessage(ws.TextMessage, []byte(idMsg))
 
 	fmt.Printf("Dropper joining %d\n", d.Id)
 
@@ -115,9 +115,11 @@ func (a *Agent) ServeDropper(w http.ResponseWriter, r *http.Request) {
 				fmt.Printf("BAD ERROR 1\n")
 				d.mux.Unlock()
 				continue // should be the Recipient's problem
+			} else {
+				fmt.Printf("%d: Sent a message to the recipient.\n", d.Id)
 			}
 		} else {
-			err = sock.WriteMessage(ws.TextMessage, []byte("waiting"))
+			err = sock.WriteMessage(ws.TextMessage, []byte("{\"status\":\"waiting\"}"))
 			if err != nil {
 				d.mux.Unlock()
 				break
@@ -166,6 +168,19 @@ func (a *Agent) ServeRecipient(w http.ResponseWriter, r *http.Request) {
 	d.setRecipient(sock)
 	defer d.setRecipient(nil)
 
+	d.mux.Lock()
+
+	if d.Dropper != nil {
+		err = d.Dropper.WriteMessage(ws.TextMessage, []byte("{\"status\":\"ready\"}"))
+		if err != nil {
+			fmt.Printf("BAD ERROR 2\n")
+			d.mux.Unlock()
+			return
+		}
+	}
+
+	d.mux.Unlock()
+
 	fmt.Printf("Recipient joining %d\n", d.Id)
 
 	for {
@@ -184,12 +199,14 @@ func (a *Agent) ServeRecipient(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if err != nil {
-				fmt.Printf("BAD ERROR 2\n")
+				fmt.Printf("BAD ERROR 3\n")
 				d.mux.Unlock()
 				continue // should be the Dropper's problem
+			} else {
+				fmt.Printf("%d: Sent a message to the dropper.\n", d.Id)
 			}
 		} else {
-			err = sock.WriteMessage(ws.TextMessage, []byte("waiting"))
+			err = sock.WriteMessage(ws.TextMessage, []byte("{\"status\":\"waiting\"}"))
 			if err != nil {
 				d.mux.Unlock()
 				break

@@ -3,7 +3,7 @@
 
 // constants
 
-const wsRoot = 'localhost:5050';
+const wsRoot = 'ws://207.23.190.191:5050';
 
 // states
 
@@ -11,6 +11,7 @@ let bytes = 0;
 let size = 0;
 let speed = 0;
 let name = '';
+let status = '';
 
 function getBytes() {
   return bytes;
@@ -26,6 +27,10 @@ function getSpeed() {
 
 function getName() {
   return name;
+}
+
+function getStatus() {
+  return status;
 }
 
 function _setBytes(newBytes) {
@@ -44,4 +49,20 @@ function _setName(newName) {
   name = newName;
 }
 
-export { getBytes, getSize, getSpeed, getName, wsRoot, _setBytes, _setSize, _setSpeed, _setName };
+function _setStatus(newStatus) {
+  status = newStatus;
+}
+
+export {
+  getBytes,
+  getSize,
+  getSpeed,
+  getName,
+  getStatus,
+  wsRoot,
+  _setBytes,
+  _setSize,
+  _setSpeed,
+  _setName,
+  _setStatus,
+};

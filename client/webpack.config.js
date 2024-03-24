@@ -3,8 +3,6 @@ const path = require('path');
 module.exports = {
   entry: {
     main: './src/index.jsx',
-    dropper: './workers/dropper.js',
-    receiver: './workers/receiver.js',
   },
   output: {
     filename: 'js/[name].js',
