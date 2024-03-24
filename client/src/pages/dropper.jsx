@@ -34,12 +34,10 @@ export function Dropper() {
     event.preventDefault();
     setIsDropping(false);
 
-    const droppedFile = event.dataTransfer.files[0];
-    if (droppedFile) {
-      setFile(droppedFile);
+    if (file) {
       setStatus('File is dropped.');
 
-      droppr.drop(droppedFile, (update) => {
+      droppr.drop(file, (update) => {
         setFile(null);
 
         // if it provides the id attribute
