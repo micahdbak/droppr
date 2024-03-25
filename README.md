@@ -1,6 +1,17 @@
 # Droppr.
 
-Simply transfer.
+Droppr is a novel file transfer app / website / program created by Micah Baker, Nakul Bansal, Johnny Deng, and Simon Purdon for the Mountain Madness 2024 Hackathon on the Simon Fraser University Burnaby Mountain campus.
+
+## Prompt: A New Perspective
+
+**A new perspective on file transfer.**
+
+Droppr does something that no other transfer websites do: remove the middle-man during data transfer.
+
+This is a *new perspective* to the conventional "cloud storage" model of file transfer, as droppr transfers files in peer-to-peer fashion, without losing security, and retaining file quality.
+
+With droppr, why use the cloud? 🤔
+We hope that by using droppr you'll get a new perspective on file transfer, and rethink the benefits of transfer convention.
 
 ## IMPORTANT DISCLAIMER
 
