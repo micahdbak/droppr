@@ -27,6 +27,18 @@ It will work, it will just be memory-intensive, and might hog system resources.
 
 ## Installation
 
+### YouTube demonstration
+
+There is an installation guide for MacOS machines, split in two parts.
+It is split in two because I accidentally set `wsRoot` to an IP address without specifying the port.
+Not a big mistake; make sure not to do the same. 😉
+
+[MacOS Installation - Part A - YouTube](https://youtu.be/e8SWK_OIZdE)
+
+[MacOS Installation - Part B - YouTube](https://youtu.be/05bvNlZ5wKY)
+
+### Text Guide
+
 To install and run droppr, there are two important parts:
 
 - React Frontend
