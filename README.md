@@ -25,10 +25,6 @@ And don't run important programs in the background, incase your system lags.
 If you wish to use Firefox, please don't transfer files >500mB, to be safe.
 It will work, it will just be memory-intensive, and might hog system resources.
 
-**NOTE:** the first file you drop on a local installation will not display the download link, but it is available for download.
-This is an error in the code but it's too late to fix; the download link is `?id=0` appended to the URL for your local version of droppr.
-All subsequent drops will display the link as expected.
-
 ## Installation
 
 ### YouTube demonstration
