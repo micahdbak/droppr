@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,8 +26,6 @@ var upgrader = ws.Upgrader{
 	},
 }
 
-// TODO: use randomly generated strings
-var nextDropId int // = 0
 
 // private functions
 
@@ -37,9 +37,9 @@ func (a *Agent) register() *drop {
 	// make a new drop
 	d := new(drop)
 
-	// get next drop id
-	d.Id = nextDropId
-	nextDropId++
+	var b [8]byte
+	rand.Read(b[:])
+	d.Id = int(binary.BigEndian.Uint64(b[:])) & 0x7FFFFFFF // ensure positive value
 
 	// register this drop
 	a.drops[d.Id] = d
