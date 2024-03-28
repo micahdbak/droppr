@@ -194,12 +194,12 @@ export function Dropper() {
           <div className="flex items-center space-x-2">
             <input 
               type="text" 
-              value={`${window.location.href}/?id=${transferid}`} 
+              value={`${window.location.origin}/?id=${transferid}`} 
               readOnly 
               className="px-2 py-1 border rounded w-full text-sm"
             />
             <button 
-              onClick={() => copyToClipboard(`${window.location.href}?id=${transferid}`)}
+              onClick={() => copyToClipboard(`${window.location.origin}?id=${transferid}`)}
               className="bg-blue-500 text-white px-2 py-1 rounded text-sm"
             >
               Copy
