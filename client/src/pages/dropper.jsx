@@ -16,6 +16,16 @@ export function Dropper() {
   const [downloadStatus, setDownloadStatus] = useState('');
   const [transferid, setTransferid] = useState(-1);
   const [isDragging, setIsDragging] = useState(false);
+  const [copySuccess, setCopySuccess] = useState('');
+
+  const copyToClipboard = async (text) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopySuccess('Copied!');
+      } catch (err) {
+        setCopySuccess('Failed to copy text');
+      }
+    };
 
   // setting file info
   const handleFile = (event) => {
@@ -181,8 +191,22 @@ export function Dropper() {
           <p>{(fileInfo.size / 1024).toFixed(1)} kB</p>
           <br />
           {transferid >= 0 ? (
-            <a href={`/?id=${transferid}`} className='text-blue-500'>Share this link with the intended recipient.</a>
-          ) : []}
+          <div className="flex items-center space-x-2">
+            <input 
+              type="text" 
+              value={`${window.location.href}/?id=${transferid}`} 
+              readOnly 
+              className="px-2 py-1 border rounded w-full text-sm"
+            />
+            <button 
+              onClick={() => copyToClipboard(`${window.location.href}?id=${transferid}`)}
+              className="bg-blue-500 text-white px-2 py-1 rounded text-sm"
+            >
+              Copy
+            </button>
+            {copySuccess && <div className="text-green-500 text-sm">{copySuccess}</div>}
+          </div>     
+        ) : []}
           <br />
           <p className='text-slate-500'>{status}</p>
           <p className='text-slate-500'>{downloadStatus}</p>
