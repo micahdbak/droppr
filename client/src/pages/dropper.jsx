@@ -8,16 +8,21 @@ const statusInterval = 100; // 100ms
 const MB = 1000 * 1024;
 
 export function Dropper() {
+  const [fileList, setFileList] = useState([]);
+  const [fileInfoList, setFileInfoList] = useState([]);
   const [file, setFile] = useState(null);
-  const [fileInfo, setFileInfo] = useState({});
+  //const [fileInfo, setFileInfo] = useState({});
   const [bytes, setBytes] = useState(0);
   const [lastBytes, setLastBytes] = useState(0);
-  const [isDropping, setIsDropping] = useState(false);
+  //const [isDropping, setIsDropping] = useState(false);
   const [status, setStatus] = useState('');
   const [downloadStatus, setDownloadStatus] = useState('');
   const [transferid, setTransferid] = useState(-1);
   const [isDragging, setIsDragging] = useState(false);
   const [hasCopied, setHasCopied] = useState(false);
+  const [dropped, setDropped] = useState(false);
+  const [totalSize, setTotalSize] = useState(0);
+
 
   const copyToClipboard = async (text) => {
     try {
@@ -30,19 +35,32 @@ export function Dropper() {
   };
 
   // setting file info
-  const handleFile = (event) => {
-    const newFile = event.target.files[0];
-    if (newFile) {
-      setFileInfo({
-        name: newFile.name,
-        size: newFile.size,
-        type: newFile.type,
-      });
+  const handleFiles = (event) => {
+    
 
-      setFile(newFile);
+    //add file into list 
+    const newFiles = event.target.files;
+    for (let i = 0; i<newFiles.length; i++) {
+      const newFile = newFiles[i];
+      //console.log(newFile);
+      if (newFile) {
+        const fileInfo = {
+          name: newFile.name,
+          size: newFile.size,
+          type: newFile.type,
+        };
+        setFileInfoList(prevFileInfoList => [...prevFileInfoList, fileInfo]);
+        setFileList(prevFileList => [...prevFileList, file]);
+        const total = parseInt(fileInfo.size, 10) + totalSize;
+        setTotalSize(total);
+        setFile(newFile);
+      }
       setStatus('registering');
-      setIsDropping(true);
 
+    
+      //setIsDropping(true);
+      
+      /*
       droppr.drop(newFile, (update) => {
         // if it provides the id attribute
         if (update.id) {
@@ -53,7 +71,6 @@ export function Dropper() {
           setTransferid(-1);
         }
 
-        // nak
         if (update.status === 'complete') {
           setIsDropping(false);
           setDownloadStatus('');
@@ -62,32 +79,45 @@ export function Dropper() {
         // update status based on update
         setStatus(update.status);
       });
+      */
     }
   };
+  /*
+  useEffect(() => {
+    setFileInfoList([...fileInfoList, fileInfo]);
+    console.log(fileInfoList[0]?.name)
+  }, [fileInfo]);
+  */
+
+
+
 
   // handling dropping files
   const handleDrop = (event) => {
     event.preventDefault();
-
     let _file = file;
 
-    if (file === null) {
-      const droppedFile = event.dataTransfer.files[0];
-
-      setFile(droppedFile);
-      _file = droppedFile;
-
-      setFileInfo({
-        name: droppedFile.name,
-        size: droppedFile.size,
-        type: droppedFile.type,
-      });
-    }
-
-    if (_file) {
+    //add file into list 
+    const newFiles = event.dataTransfer.files;
+    for (let i = 0; i<newFiles.length; i++) {
+      const newFile = newFiles[i];
+      //console.log(newFile);
+      if (newFile) {
+        const fileInfo = {
+          name: newFile.name,
+          size: newFile.size,
+          type: newFile.type,
+        };
+        setFileInfoList(prevFileInfoList => [...prevFileInfoList, fileInfo]);
+        setFileList(prevFileList => [...prevFileList, file]);
+        setFile(newFile);
+      }
       setStatus('registering');
-      setIsDropping(true);
+    
 
+      //setIsDropping(true);
+
+      /*
       droppr.drop(_file, (update) => {
         // if it provides the id attribute
         if (update.id) {
@@ -107,8 +137,17 @@ export function Dropper() {
         // update status based on update
         setStatus(update.status);
       });
+      */
     }
   };
+
+  const handleDroppr = (event) => {
+    //drops all files
+    //droppr.drop(_file, (update) => {
+    setDropped(true);
+
+  }
+
 
   // handle dragging
   const handleDragOver = (event) => {
@@ -127,25 +166,26 @@ export function Dropper() {
 
   // update statuses (typically every 100ms)
   useEffect(() => {
-    if (isDropping) {
-      const percentage = ((100 * bytes) / fileInfo.size).toFixed(1);
+    if (dropped) {
+      const percentage = ((100 * bytes) / totalSize).toFixed(1);
       const speed = ((bytes - lastBytes) / statusInterval / 1000).toFixed(1); // MBps
 
       if (bytes === 0) {
         setDownloadStatus('');
       } else {
         setDownloadStatus(
-          `Dropped ${(bytes / MB).toFixed(2)} of ${(fileInfo.size / MB).toFixed(2)} MB (${speed} MBps) (${percentage}%).`,
+          `Dropped ${(bytes / MB).toFixed(2)} of ${(totalSize / MB).toFixed(2)} MB (${speed} MBps) (${percentage}%).`,
         );
       }
       setLastBytes(bytes);
     }
-  }, [bytes, fileInfo, isDropping]);
+  }, [bytes, fileInfoList, dropped]);
 
   // on page load
   useEffect(() => {
     const checkStatusInterval = setInterval(() => {
-      setBytes(droppr.getBytes());
+      setBytes(100); //tmp
+      //setBytes(droppr.getBytes());
     }, statusInterval);
 
     return () => {
@@ -153,15 +193,16 @@ export function Dropper() {
     };
   }, []);
 
+
   return (
     <div>
       <Header />
       <div className="flex items-center justify-center my-10">
-        <p className="text-3xl font-light">A new perspective for file transfer.</p>
+        <p className="text-3xl font-light">Simply Transfer</p>
       </div>
 
       {/* Drop-zone */}
-      {file === null ? (
+      {dropped === false ? (
         <div
           className={`bg-slate-100 p-36 mx-auto w-3/4 h-3/4 my-12 rounded-lg flex items-center justify-center border border-black border-dashed ${isDragging ? 'border-blue-500 border-2' : ''}`}
           onDrop={handleDrop}
@@ -170,16 +211,27 @@ export function Dropper() {
           onDragLeave={handleDragLeave}
         >
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <p className="font-medium">Drop your files to upload</p>
+            <p className="font-medium">Drop your files</p>
             <p className="mb-1">or</p>
-            <input type="file" onChange={handleFile} className="hidden" />
+            <input type="file" onChange={handleFiles} className="hidden" multiple/>
             <button
               className="bg-slate-200 px-4 py-2 rounded-lg"
               onClick={() => document.querySelector('input[type="file"]').click()}
             >
               Browse Files
             </button>
-          </div>
+
+            <br></br> 
+
+            <input onChange={ (e) => { setFileList(e.target.files)}} className="hidden" type="file" multiple/>
+            <button
+              className="bg-slate-200 px-4 py-2 rounded-lg"
+              onClick={ handleDroppr }
+            >
+              Drop
+            </button>
+            <p className="font-medium"> {fileList.length} file(s) selected</p>
+          </div>          
         </div>
       ) : (
         <div className='flex flex-col flex-nowrap mx-auto w-3/4 h-3/4 items-center justify-center'>
@@ -189,8 +241,8 @@ export function Dropper() {
           <br />
           <img src='/file.png' width='48px' height='48px' />
           <br />
-          <p className='font-semibold'>{fileInfo.name}</p>
-          <p>{(fileInfo.size / 1024).toFixed(1)} kB</p>
+          <p className='font-semibold'>{fileInfoList[0].name}</p>
+          <p>{(totalSize / 1024).toFixed(1)} kB</p>
           <br />
           {transferid >= 0 ? (
           <div className="flex items-center space-x-2">
