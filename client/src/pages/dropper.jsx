@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import * as droppr from '../interface';
 import { Header, Footer } from '../components/index.js';
-
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCopy, faCheck } from '@fortawesome/free-solid-svg-icons';
 
 const statusInterval = 100; // 100ms
 const MB = 1000 * 1024;
@@ -16,6 +17,17 @@ export function Dropper() {
   const [downloadStatus, setDownloadStatus] = useState('');
   const [transferid, setTransferid] = useState(-1);
   const [isDragging, setIsDragging] = useState(false);
+  const [hasCopied, setHasCopied] = useState(false);
+
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setHasCopied(true);
+      setTimeout(() => setHasCopied(false), 3000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
+  };
 
   // setting file info
   const handleFile = (event) => {
@@ -181,8 +193,19 @@ export function Dropper() {
           <p>{(fileInfo.size / 1024).toFixed(1)} kB</p>
           <br />
           {transferid >= 0 ? (
-            <a href={`/?id=${transferid}`} className='text-blue-500'>Share this link with the intended recipient.</a>
-          ) : []}
+          <div className="flex items-center space-x-2">
+            <input 
+              type="text" 
+              value={`${window.location.origin}/?id=${transferid}`} 
+              readOnly 
+              className="px-2 py-1 border rounded w-full text-sm"
+              style={{ width: '17vw' }}
+            />
+            <button onClick={() => copyToClipboard(`${window.location.origin}/?id=${transferid}`)}>
+              <FontAwesomeIcon icon={hasCopied ? faCheck : faCopy} />
+            </button>
+          </div>     
+        ) : []}
           <br />
           <p className='text-slate-500'>{status}</p>
           <p className='text-slate-500'>{downloadStatus}</p>
