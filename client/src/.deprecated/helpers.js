@@ -1,3 +1,7 @@
+// DEPRECATED
+//
+// Copyright (C) 2024 droppr. All rights reserved.
+//
 // interface/
 // helpers.js
 
@@ -9,27 +13,12 @@ const _maxBufferedAmount = 1000 * 1024; // 1 MB
 const _rtcConfiguration = {
   iceServers: [
     {
-      urls: "stun:stun.relay.metered.ca:80",
+      urls: "stun:relay.droppr.net:5051",
     },
     {
-      urls: "turn:na.relay.metered.ca:80",
-      username: "0c4d926a7674eb75577d4574",
-      credential: "flfI0hMapaN2uEk8",
-    },
-    {
-      urls: "turn:na.relay.metered.ca:80?transport=tcp",
-      username: "0c4d926a7674eb75577d4574",
-      credential: "flfI0hMapaN2uEk8",
-    },
-    {
-      urls: "turn:na.relay.metered.ca:443",
-      username: "0c4d926a7674eb75577d4574",
-      credential: "flfI0hMapaN2uEk8",
-    },
-    {
-      urls: "turns:na.relay.metered.ca:443?transport=tcp",
-      username: "0c4d926a7674eb75577d4574",
-      credential: "flfI0hMapaN2uEk8",
+      urls: "turn:relay.droppr.net:5051",
+      username: "droppr",
+      credential: "p2pfiletransfer"
     },
   ]
 };

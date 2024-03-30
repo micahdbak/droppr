@@ -1,6 +1,24 @@
-# Droppr.
+# droppr
 
-Droppr is a novel file transfer app / website / program created by Micah Baker, Nakul Bansal, Johnny Deng, and Simon Purdon for the Mountain Madness 2024 Hackathon on the Simon Fraser University Burnaby Mountain campus.
+**droppr** is a peer-to-peer file transfer service.
+
+Copyright (C) 2024 droppr. All rights reserved.
+
+---
+
+## Current Implementations
+
+[droppr.ca](https://droppr.ca), [droppr.me](https://droppr.me), and [droppr.net](https://droppr.net) all serve the client (see the client directory for source code).
+
+`sc.droppr.net` serves the signal channel (see the signalchannel directory for source code).
+
+`relay.droppr.net` serves the [eturnal](https://eturnal.net) STUN and TURN server, which is configured using the eturnal.yml configuration file.
+
+All of these domains and subdomains point to a central DigitalOcean droplet that uses `nginx` to route incoming requests to different services.
+
+---
+
+# Mountain Madness 2024
 
 ## Prompt: A New Perspective
 
@@ -57,8 +75,6 @@ Your private IP address is an address which computers on the same network as you
 
 On a MacOS machine, you can find your private IP address by holding OPTION and clicking on the internet icon in the top right of your computer.
 Your private IP address is the first line under your active network:
-
-<img src="imgs/ipaddress.png" height="200px" />
 
 Alternatively, for Linux, you can use the command `hostname -I` to list IP addresses for your machine.
 
@@ -186,24 +202,6 @@ You can copy this link by right-clicking and copying the Link URL---**don't clic
 
 Open this link in another tab, or on another computer if accessing the private IP address of the hosting device, and a transfer should begin instantly.
 Watch the summary of MBs transferred, and once the transfer is complete, you can click the download link on the recipient webpage.
-
-Image examples of correct usage:
-
-<img src="imgs/drop.png" height="400" />
-
-(The homepage.)
-
-<img src="imgs/droppedfile.png" height="400" />
-
-(You've dropped a file, and the Signal Channel registered it.)
-
-<img src="imgs/copylink.png" height="400" />
-
-(Copy the download link.)
-
-<img src="imgs/download.png" height="400" />
-
-(The file was downloaded, once the download link was opened in **another tab or window**, optionally on another device.)
 
 ## droppr.ca
 

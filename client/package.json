@@ -1,7 +1,7 @@
 {
   "name": "droppr",
   "version": "0.1.0",
-  "description": "Droppr.",
+  "description": "droppr.",
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {

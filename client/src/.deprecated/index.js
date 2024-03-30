@@ -1,3 +1,5 @@
+// Copyright (C) 2024 droppr. All rights reserved.
+//
 /* Droppr Interface
  *
  * exports: drop, receive, getBytes, getSize, getSpeed, getName

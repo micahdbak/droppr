@@ -1,3 +1,6 @@
+// Copyright (C) 2024 droppr. All rights reserved.
+//
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './tailwind.css';

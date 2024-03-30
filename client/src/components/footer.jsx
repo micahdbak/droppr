@@ -1,3 +1,6 @@
+// Copyright (C) 2024 Droppr. All Rights Reserved.
+//
+
 import React from 'react';
 
 export function Footer() {

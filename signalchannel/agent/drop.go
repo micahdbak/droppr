@@ -1,3 +1,6 @@
+// Copyright (C) 2024 droppr. All rights reserved.
+//
+
 package agent
 
 import (
@@ -6,9 +9,9 @@ import (
 )
 
 type drop struct {
-	Id        int        // drop identifier
-	Dropper   *ws.Conn   // the WebSocket connection for the dropper
-	Recipient *ws.Conn   // the WebSocket connection for the recipient
+	Uuid      string   // drop identifier
+	Dropper   *ws.Conn // the WebSocket connection for the dropper
+	Recipient *ws.Conn // the WebSocket connection for the recipient
 	mux       sync.Mutex
 }
 

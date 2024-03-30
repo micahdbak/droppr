@@ -1,9 +1,10 @@
+// Copyright (C) 2024 droppr. All rights reserved.
+//
+
 import React from 'react';
 import { Header, Footer } from '../components/index.js';
 import Container from '@mui/material/Container';
 import Fab from '@mui/material/Fab';
-import box_img from "../assests/box.png"
-
 export function About() {
   return (
     <div>
@@ -15,7 +16,7 @@ export function About() {
       </div>
 
       <div className='flex items-center justify-center m-8'>
-        <img src={box_img} className='w-52 rounded-xl '></img>
+        <img src='/box.png' className='w-52 rounded-xl '></img>
       </div>
 
       <div className='flex items-center justify-center m-12'>

@@ -1,3 +1,6 @@
+// Copyright (C) 2024 droppr. All rights reserved.
+//
+
 import { Dropper, Receiver, About } from './pages';
 import React, { useState, useEffect } from 'react';
 

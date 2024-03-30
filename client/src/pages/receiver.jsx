@@ -1,3 +1,6 @@
+// Copyright (C) 2024 droppr. All rights reserved.
+//
+
 import React, { useState, useEffect } from 'react';
 
 import { Header, Footer } from '../components/index.js';
