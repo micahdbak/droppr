@@ -9,13 +9,25 @@ import { SignalChannel } from './SignalChannel.js';
 const _configuration = {
   iceServers: [
     {
-      urls: "stun:relay.droppr.net:5051",
+      // Google STUN servers
+      urls: [
+        'stun:stun.l.google.com:19302',
+        'stun:stun1.l.google.com:19302',
+        'stun:stun2.l.google.com:19302',
+        'stun:stun3.l.google.com:19302',
+        'stun:stun4.l.google.com:19302'
+      ]
     },
     {
-      urls: "turn:relay.droppr.net:5051",
-      username: "droppr",
-      credential: "p2pfiletransfer"
+      // droppr STUN server
+      urls: 'stun:relay.droppr.net:5051'
     },
+    {
+      // droppr TURN server
+      urls: 'turn:relay.droppr.net:5051',
+      username: 'droppr',
+      credential: 'p2pfiletransfer'
+    }
   ]
 };
 
@@ -60,22 +72,21 @@ const _configuration = {
  * - The peer has created a data channel to communicate with.
  */
 export class Peer extends EventTarget {
-
   // public fields
 
   id; // the drop identifier
 
   // private fields
 
-  _sc;  // the signal channel connection
+  _sc; // the signal channel connection
   _rtc; // the WebRTC peer connection
-  _dc;  // the data channel for the WebRTC peer connection
+  _dc; // the data channel for the WebRTC peer connection
 
   _isDropper; // whether this instance is the dropper (not the connected peer)
 
-  _moreCandidates     = true;  // whether there are more ICE candidates
-  _morePeerCandidates = true;  // whether the peer has more ICE candidates
-  _iceRestart         = false; // whether to restart the ICE gathering process
+  _moreCandidates = true; // whether there are more ICE candidates
+  _morePeerCandidates = true; // whether the peer has more ICE candidates
+  _iceRestart = false; // whether to restart the ICE gathering process
 
   // constructor
 
@@ -97,7 +108,7 @@ export class Peer extends EventTarget {
     // WebRTC peer connection event listeners
     this._rtc.addEventListener(
       'negotiationneeded',
-      this._onNegotiationNeeded.bind(this),
+      this._onNegotiationNeeded.bind(this)
     );
     this._rtc.addEventListener(
       'iceconnectionstatechange',
@@ -118,7 +129,10 @@ export class Peer extends EventTarget {
     this._sc.addEventListener('registered', this._onScRegistered.bind(this));
     this._sc.addEventListener('failed', this._onScFailed.bind(this));
     this._sc.addEventListener('connected', this._onScConnected.bind(this));
-    this._sc.addEventListener('disconnected', this._onScDisconnected.bind(this));
+    this._sc.addEventListener(
+      'disconnected',
+      this._onScDisconnected.bind(this)
+    );
     this._sc.addEventListener('close', this._onScClose.bind(this));
     this._sc.addEventListener('message', this._onScMessage.bind(this));
   }
@@ -262,7 +276,7 @@ export class Peer extends EventTarget {
     if (this._rtc.connectionState === 'connected') {
       this.dispatchEvent(new Event('connected'));
 
-    // check for a disconnected or failed state
+      // check for a disconnected or failed state
     } else if (
       this._rtc.connectionState === 'disconnected' ||
       this._rtc.connectionState === 'failed'
@@ -293,7 +307,9 @@ export class Peer extends EventTarget {
   }
 
   _onDataChannel(event) {
-    this.dispatchEvent(new RTCDataChannelEvent('datachannel', { channel: event.channel }));
+    this.dispatchEvent(
+      new RTCDataChannelEvent('datachannel', { channel: event.channel })
+    );
   }
 
   // public methods

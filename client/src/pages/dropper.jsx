@@ -2,7 +2,7 @@
 //
 
 import React, { useState, useEffect } from 'react';
-import * as droppr from '../interface';
+import * as droppr from '../utils';
 import { Header, Footer, FileComponent } from '../components/index.js';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faCheck } from '@fortawesome/free-solid-svg-icons';
@@ -25,7 +25,6 @@ export function Dropper() {
   const [dropped, setDropped] = useState(false); //when drop button is pressed
   const [totalSize, setTotalSize] = useState(0);
 
-
   const copyToClipboard = async (text) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -40,16 +39,16 @@ export function Dropper() {
   const handleFiles = (event) => {
     let total = 0;
     const newFiles = event.target.files;
-    for (let i = 0; i<newFiles.length; i++) {
+    for (let i = 0; i < newFiles.length; i++) {
       const newFile = newFiles[i];
       if (newFile) {
         const fileInfo = {
           name: newFile.name,
           size: newFile.size,
-          type: newFile.type,
+          type: newFile.type
         };
-        setFileInfoList(prevFileInfoList => [...prevFileInfoList, fileInfo]);
-        setFileList(prevFileList => [...prevFileList, file]);
+        setFileInfoList((prevFileInfoList) => [...prevFileInfoList, fileInfo]);
+        setFileList((prevFileList) => [...prevFileList, file]);
         total += parseInt(fileInfo.size, 10);
         setFile(newFile);
       }
@@ -57,10 +56,9 @@ export function Dropper() {
     setTotalSize(total + totalSize);
 
     if (fileList.length > 0) {
-      setStatus('registering'); 
+      setStatus('registering');
     }
   };
-
 
   // handling dragged files
   const handleDrop = (event) => {
@@ -69,17 +67,17 @@ export function Dropper() {
     let total = 0;
 
     const newFiles = event.dataTransfer.files;
-    for (let i = 0; i<newFiles.length; i++) {
+    for (let i = 0; i < newFiles.length; i++) {
       const newFile = newFiles[i];
 
       if (newFile) {
         const fileInfo = {
           name: newFile.name,
           size: newFile.size,
-          type: newFile.type,
+          type: newFile.type
         };
-        setFileInfoList(prevFileInfoList => [...prevFileInfoList, fileInfo]);
-        setFileList(prevFileList => [...prevFileList, file]);
+        setFileInfoList((prevFileInfoList) => [...prevFileInfoList, fileInfo]);
+        setFileList((prevFileList) => [...prevFileList, file]);
         total += parseInt(fileInfo.size, 10);
         setFile(newFile);
       }
@@ -94,9 +92,7 @@ export function Dropper() {
     //drops all files
     //droppr.drop(_file, (update) => {
     setDropped(true);
-
-  }
-
+  };
 
   // handle dragging
   const handleDragOver = (event) => {
@@ -123,7 +119,7 @@ export function Dropper() {
         setDownloadStatus('');
       } else {
         setDownloadStatus(
-          `Dropped ${(bytes / MB).toFixed(2)} of ${(totalSize / MB).toFixed(2)} MB (${speed} MBps) (${percentage}%).`,
+          `Dropped ${(bytes / MB).toFixed(2)} of ${(totalSize / MB).toFixed(2)} MB (${speed} MBps) (${percentage}%).`
         );
       }
       setLastBytes(bytes);
@@ -141,7 +137,6 @@ export function Dropper() {
       clearInterval(checkStatusInterval);
     };
   }, []);
-
 
   return (
     <div>
@@ -162,39 +157,52 @@ export function Dropper() {
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <p className="font-medium">Drop your files</p>
             <p className="mb-1">or</p>
-            <input type="file" onChange={handleFiles} className="hidden" multiple/>
+            <input
+              type="file"
+              onChange={handleFiles}
+              className="hidden"
+              multiple
+            />
             <button
               className="bg-slate-200 px-4 py-2 rounded-lg"
-              onClick={() => document.querySelector('input[type="file"]').click()}
+              onClick={() =>
+                document.querySelector('input[type="file"]').click()
+              }
             >
               Browse Files
             </button>
 
-            <br></br> 
+            <br></br>
 
-            <input onChange={ (e) => { setFileList(e.target.files)}} className="hidden" type="file" multiple/>
+            <input
+              onChange={(e) => {
+                setFileList(e.target.files);
+              }}
+              className="hidden"
+              type="file"
+              multiple
+            />
             <button
               className="bg-slate-200 px-4 py-2 rounded-lg"
-              onClick={ handleDroppr }
+              onClick={handleDroppr}
             >
               Drop
             </button>
             <p className="font-medium"> {fileList.length} file(s) selected</p>
-          </div>          
+          </div>
         </div>
       ) : (
-        <div className='flex flex-col flex-nowrap mx-auto w-3/4 h-3/4 items-center justify-center'>
+        <div className="flex flex-col flex-nowrap mx-auto w-3/4 h-3/4 items-center justify-center">
           <br />
           <br />
           <br />
           <br />
-          <img src='/file.png' width='48px' height='48px' />
+          <img src="/file.png" width="48px" height="48px" />
           <br />
 
-          
-          <div className='font-semibold'>
+          <div className="font-semibold">
             {fileInfoList.map((fileInfo, index) => (
-            <FileComponent index={index+1} fileInfo={fileInfo} />
+              <FileComponent index={index + 1} fileInfo={fileInfo} />
             ))}
           </div>
 
@@ -203,25 +211,31 @@ export function Dropper() {
           <p>Total size: {(totalSize / 1024).toFixed(1)} kB</p>
           <br />
           {transferid >= 0 ? (
-          <div className="flex items-center space-x-2">
-            <input 
-              type="text" 
-              value={`${window.location.origin}/?id=${transferid}`} 
-              readOnly 
-              className="px-2 py-1 border rounded w-full text-sm"
-              style={{ width: '17vw' }}
-            />
-            <button onClick={() => copyToClipboard(`${window.location.origin}/?id=${transferid}`)}>
-              <FontAwesomeIcon icon={hasCopied ? faCheck : faCopy} />
-            </button>
-          </div>     
-        ) : []}
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={`${window.location.origin}/?id=${transferid}`}
+                readOnly
+                className="px-2 py-1 border rounded w-full text-sm"
+                style={{ width: '17vw' }}
+              />
+              <button
+                onClick={() =>
+                  copyToClipboard(`${window.location.origin}/?id=${transferid}`)
+                }
+              >
+                <FontAwesomeIcon icon={hasCopied ? faCheck : faCopy} />
+              </button>
+            </div>
+          ) : (
+            []
+          )}
           <br />
-          <p className='text-slate-500'>{status}</p>
-          <p className='text-slate-500'>{downloadStatus}</p>
+          <p className="text-slate-500">{status}</p>
+          <p className="text-slate-500">{downloadStatus}</p>
         </div>
       )}
-      <Footer/>
+      <Footer />
     </div>
   );
 }

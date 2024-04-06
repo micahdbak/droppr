@@ -5,7 +5,15 @@
 // interface/
 // receive.js
 
-import { wsRoot, _setBytes, _setStatus, _rtcConfiguration, _setName, _setSize, _setType } from './helpers.js';
+import {
+  wsRoot,
+  _setBytes,
+  _setStatus,
+  _rtcConfiguration,
+  _setName,
+  _setSize,
+  _setType
+} from './helpers.js';
 
 let rtc = null; // WebRTC connection
 let sc = null; // Signal Channel WebSocket connection
@@ -28,7 +36,7 @@ export function receive(id, update) {
     console.log(rtc.connectionState);
 
     update({
-      status: rtc.connectionState,
+      status: rtc.connectionState
     });
 
     // close
@@ -43,7 +51,7 @@ export function receive(id, update) {
 
     const packet = {
       type: 'candidate',
-      candidate: event.candidate,
+      candidate: event.candidate
     };
 
     sc.send(JSON.stringify(packet));
@@ -76,7 +84,9 @@ export function receive(id, update) {
           });
         } else if (message.type === 'complete') {
           // create downloadable URL for the object
-          const href = URL.createObjectURL(new Blob([blob], { type: fileInfo.type }));
+          const href = URL.createObjectURL(
+            new Blob([blob], { type: fileInfo.type })
+          );
           blob = null; // garbage
 
           dc.send('{"type":"received"}');
@@ -134,7 +144,7 @@ export function receive(id, update) {
 
       const packet = {
         type: 'answer',
-        answer,
+        answer
       };
 
       sc.send(JSON.stringify(packet));

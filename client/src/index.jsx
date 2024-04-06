@@ -3,13 +3,14 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './tailwind.css';
+//import './tailwind.css';
 
-import { Main } from './main.jsx';
+//import { Main } from './main.jsx';
+import { Test } from './test.jsx';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <Main />
-  </React.StrictMode>,
+    <Test />
+  </React.StrictMode>
 );

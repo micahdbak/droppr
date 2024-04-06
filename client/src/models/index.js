@@ -4,5 +4,7 @@
 // index.js
 
 export * from './DataChannel.js';
+export * from './Dropper.js';
 export * from './Peer.js';
+export * from './Recipient.js';
 export * from './SignalChannel.js';

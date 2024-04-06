@@ -3,6 +3,10 @@
 // models/
 // DataChannel.js
 
+// NOTE: this model is presently unused. It should be considered only when
+//       restarting data channels in the event of a network disconnection
+//       proves inconsistent and unreliable.
+
 /* DataChannel - Maintain an RTCDataChannel for a Peer, recreating it when
  *               connectivity is lost. Also keeps an internal buffer of sent
  *               messages, so when connectivity is lost, buffered data isn't
@@ -33,16 +37,18 @@
  *
  * 'message' -> MessageEvent (event.data is the message data)
  * - A message was received through the data channel.
+ *
+ * 'bufferedamountlow' -> Event
+ * - The buffer is empty
  */
 export class DataChannel extends EventTarget {
-
   // private fields
 
-  _peer   = null;     // the peer for which this data channel exists
-  _label  = 'droppr'; // the label of the data channel
-  _dc     = null;     // RTCDataChannel
-  _open   = false;    // whether the data channel is open
-  _buffer = [];       // the internal buffer of unsent data
+  _peer = null; // the peer for which this data channel exists
+  _label = 'droppr'; // the label of the data channel
+  _dc = null; // RTCDataChannel
+  _open = false; // whether the data channel is open
+  _buffer = []; // the internal buffer of unsent data
 
   // constructor
 
@@ -69,6 +75,7 @@ export class DataChannel extends EventTarget {
   // private methods
 
   _dcConfigure() {
+    this._dc.binaryType = 'arraybuffer'; // receive as ArrayBuffers
     this._dc.addEventListener('message', this._onDcMessage.bind(this));
     this._dc.addEventListener('open', this._onDcOpen.bind(this));
     this._dc.addEventListener('close', this._onDcClose.bind(this));
@@ -90,7 +97,7 @@ export class DataChannel extends EventTarget {
 
     // if the buffer has data, send it through the data channel
     // (this data was lost when the data channel was closed)
-    this._buffer.forEach(data => {
+    this._buffer.forEach((data) => {
       this._dc.send(data);
     });
   }
@@ -105,6 +112,9 @@ export class DataChannel extends EventTarget {
   _onDcBufferedAmountLow() {
     // empty the backup buffer; all messages were sent
     this._buffer = [];
+
+    // dispatch bufferedamountlow event
+    this.dispatchEvent(new Event('bufferedamountlow'));
   }
 
   // public methods

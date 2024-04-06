@@ -11,19 +11,23 @@ export function About() {
       <Header />
 
       <div className="py-4 px-4 bg-purple-950 flex justify-center items-center flex-col">
-        <p className="text-center text-6xl font-extrabold text-gray-50 mt-2">droppr.</p>
-        <p className='text-white font-semibold mt-4 mb-2 italic'>Simply Transfer.</p>
+        <p className="text-center text-6xl font-extrabold text-gray-50 mt-2">
+          droppr.
+        </p>
+        <p className="text-white font-semibold mt-4 mb-2 italic">
+          Simply Transfer.
+        </p>
       </div>
 
-      <div className='flex items-center justify-center m-8'>
-        <img src='/box.png' className='w-52 rounded-xl '></img>
+      <div className="flex items-center justify-center m-8">
+        <img src="/box.png" className="w-52 rounded-xl "></img>
       </div>
 
-      <div className='flex items-center justify-center m-12'>
+      <div className="flex items-center justify-center m-12">
         <p>More to come...</p>
       </div>
 
-      <Footer/>
+      <Footer />
     </div>
   );
 }

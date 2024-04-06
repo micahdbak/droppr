@@ -13,13 +13,13 @@ const _maxBufferedAmount = 1000 * 1024; // 1 MB
 const _rtcConfiguration = {
   iceServers: [
     {
-      urls: "stun:relay.droppr.net:5051",
+      urls: 'stun:relay.droppr.net:5051'
     },
     {
-      urls: "turn:relay.droppr.net:5051",
-      username: "droppr",
-      credential: "p2pfiletransfer"
-    },
+      urls: 'turn:relay.droppr.net:5051',
+      username: 'droppr',
+      credential: 'p2pfiletransfer'
+    }
   ]
 };
 
@@ -90,5 +90,5 @@ export {
   _setSize,
   _setName,
   _setType,
-  _setStatus,
+  _setStatus
 };

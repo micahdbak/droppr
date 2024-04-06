@@ -4,12 +4,12 @@
 // SignalChannel.js
 
 // get current environment variables
-const _wsScheme   = process.env.REACT_APP_SC_WS_SCHEME;
+const _wsScheme = process.env.REACT_APP_SC_WS_SCHEME;
 //const _restScheme = process.env.REACT_APP_SC_REST_SCHEME;
-const _host       = process.env.REACT_APP_SC_HOST;
-const _pingRate   = process.env.REACT_APP_SC_PING_RATE;
+const _host = process.env.REACT_APP_SC_HOST;
+const _pingRate = process.env.REACT_APP_SC_PING_RATE;
 
-const _wsRoot   = _wsScheme + '://' + _host;
+const _wsRoot = _wsScheme + '://' + _host;
 //const _restRoot = _restScheme + '://' + _host;
 
 let _sc;
@@ -58,10 +58,9 @@ let _sc;
  * - A message is received.
  */
 export class SignalChannel extends EventTarget {
-
   // public fields
 
-  id; // the drop identifier  
+  id; // the drop identifier
 
   // private fields
 
@@ -69,8 +68,8 @@ export class SignalChannel extends EventTarget {
 
   _isDropper; // whether this connection is for a dropper
 
-  _persist      = false; // whether to persist and attempt to reconnect
-  _pingInterval = null;  // the interval for ping messages
+  _persist = false; // whether to persist and attempt to reconnect
+  _pingInterval = null; // the interval for ping messages
 
   // constructor
 
@@ -86,7 +85,7 @@ export class SignalChannel extends EventTarget {
       this.id = id;
 
       if (isDropper) {
-        // attempt to connect to the signal channel as a dropper 
+        // attempt to connect to the signal channel as a dropper
         this._ws = new WebSocket(_wsRoot + '/drop/' + this.id);
       } else {
         // attempt to connect to the signal channel as a recipient
@@ -150,7 +149,7 @@ export class SignalChannel extends EventTarget {
       this._ws.addEventListener('close', this._onWsClose);
       this._ws.addEventListener('message', this._onWsMessage);
 
-    // shouldn't reconnect; intentional close
+      // shouldn't reconnect; intentional close
     } else {
       this.dispatchEvent(new Event('close'));
     }
@@ -171,13 +170,13 @@ export class SignalChannel extends EventTarget {
             // dispatch connected event
             this.dispatchEvent(new MessageEvent('connected'));
 
-          // got pong when already connected
-          // shouldn't have sent a ping if connected, anyways
+            // got pong when already connected
+            // shouldn't have sent a ping if connected, anyways
           } else {
             // write this off as a warning
             console.log(
               'SignalChannel Warning: ' +
-              'Got ping message when already determined as connected.'
+                'Got ping message when already determined as connected.'
             );
           }
 
@@ -188,7 +187,7 @@ export class SignalChannel extends EventTarget {
           throw new Error('Bad message.');
         }
 
-      // received an object
+        // received an object
       } else if (typeof message === 'object') {
         switch (message.status) {
           // the drop was registered and a drop identifier was given
@@ -234,12 +233,12 @@ export class SignalChannel extends EventTarget {
               // start pinging again
               this._pingInterval = setInterval(this._ping, _pingRate);
 
-            // check if this was for a non-ping message
+              // check if this was for a non-ping message
             } else if (message.data !== 'ping') {
               // write this off as a warning
               console.log(
-                'SignalChannel Warning: ' + 
-                'Failed to send message when already determined as disconnected.'
+                'SignalChannel Warning: ' +
+                  'Failed to send message when already determined as disconnected.'
               );
             }
 

@@ -9,11 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- SignalChannel, Peer, and DataChannel models for client (#1).
+- SignalChannel, Peer, and DataChannel models for client.
+- Dropper, Recipient models, and utilities for file transfer.
 
 ### Changed
 
-- Signal channel to identify drops with UUIDs (#1).
+- Signal channel to identify drops with UUIDs.
 
 ## [0.1.0] - 2024-03-23
 

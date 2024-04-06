@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 
 import { Header, Footer } from '../components/index.js';
-import * as droppr from '../interface';
+import * as droppr from '../utils';
 
 const statusInterval = 100; // 100ms
 const MB = 1000 * 1024;
@@ -21,10 +21,10 @@ export function Receiver(props) {
 
   useEffect(() => {
     console.log('update?');
-    const size = droppr.getSize();
+    const size = 0; //droppr.getSize();
     const percentage = ((100 * bytes) / size).toFixed(1);
-    const speed = (((bytes - lastBytes) / statusInterval) / 1000).toFixed(1) // MBps
-    const percent = size ? `(${percentage}%).` : "";
+    const speed = ((bytes - lastBytes) / statusInterval / 1000).toFixed(1); // MBps
+    const percent = size ? `(${percentage}%).` : '';
 
     // set status to be a summary of received bytes
     setDownloadStatus(
@@ -38,7 +38,7 @@ export function Receiver(props) {
   useEffect(() => {
     // check statuses every 100ms
     const checkStatusInterval = setInterval(() => {
-      setBytes(droppr.getBytes());
+      setBytes(0); //droppr.getBytes());
     }, statusInterval);
 
     // read transferid from URL
@@ -77,26 +77,41 @@ export function Receiver(props) {
       </div>
 
       {/* Drop-zone */}
-      <div className='flex flex-col flex-nowrap mx-auto w-3/4 h-3/4 items-center justify-center'>
+      <div className="flex flex-col flex-nowrap mx-auto w-3/4 h-3/4 items-center justify-center">
         <br />
         <br />
         <br />
         <br />
-        <img src='/file.png' width='48px' height='48px' />
+        <img src="/file.png" width="48px" height="48px" />
         <br />
-        <p className='font-semibold'>{fileInfo.name}</p>
-        <p>{(droppr.getSize() / 1024).toFixed(1)} kB</p>
+        <p className="font-semibold">{fileInfo.name}</p>
+        <p>
+          {(0) /*droppr.getSize() / 1024*/
+            .toFixed(1)}{' '}
+          kB
+        </p>
         <br />
         {fileInfo.name !== undefined ? (
           <>
-            <a href={download.href} className={download.href ? 'text-blue-500' : 'text-slate-500'}>Download {fileInfo.name}.</a>
+            <a
+              href={download.href}
+              className={download.href ? 'text-blue-500' : 'text-slate-500'}
+            >
+              Download {fileInfo.name}.
+            </a>
             <br />
           </>
-        ) : []}
-        <p className='text-slate-500'>{status}</p>
-        { download.href === undefined ? <p className='text-slate-500'>{downloadStatus}</p> : []}
+        ) : (
+          []
+        )}
+        <p className="text-slate-500">{status}</p>
+        {download.href === undefined ? (
+          <p className="text-slate-500">{downloadStatus}</p>
+        ) : (
+          []
+        )}
       </div>
-      <Footer/>
+      <Footer />
     </div>
   );
 }

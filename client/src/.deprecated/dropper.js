@@ -5,7 +5,15 @@
 // interface/
 // dropper.js
 
-import { sleep, wsRoot, _blobSize, _maxBufferedAmount, _rtcConfiguration, _setBytes, _setStatus } from './helpers.js';
+import {
+  sleep,
+  wsRoot,
+  _blobSize,
+  _maxBufferedAmount,
+  _rtcConfiguration,
+  _setBytes,
+  _setStatus
+} from './helpers.js';
 
 let rtc = null; // WebRTC connection
 let sc = null; // Signal Channel WebSocket connection
@@ -88,7 +96,7 @@ export function drop(file, update) {
     console.log(rtc.connectionState);
 
     update({
-      status: rtc.connectionState,
+      status: rtc.connectionState
     });
 
     // close
@@ -102,7 +110,7 @@ export function drop(file, update) {
     console.log(rtc.iceConnectionState);
 
     update({
-      status: rtc.iceConnectionState,
+      status: rtc.iceConnectionState
     });
 
     if (rtc.iceConnectionState === 'failed') {
@@ -111,7 +119,7 @@ export function drop(file, update) {
 
       const packet = {
         type: 'offer',
-        offer,
+        offer
       };
 
       sc.send(JSON.stringify(packet));
@@ -125,7 +133,7 @@ export function drop(file, update) {
 
       const packet = {
         type: 'candidate',
-        candidate: event.candidate,
+        candidate: event.candidate
       };
 
       sc.send(JSON.stringify(packet));
@@ -211,7 +219,7 @@ export function drop(file, update) {
 
       const packet = {
         type: 'offer',
-        offer,
+        offer
       };
 
       sc.send(JSON.stringify(packet));

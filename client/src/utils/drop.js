@@ -3,86 +3,34 @@
 // utils/
 // drop.js
 
-import { DataChannel, Peer } from '../models/index.js';
+import { Dropper } from '../models/index.js';
 
-let peer = null;
-let dc = null;
-let pingInterval = null;
-
-export function cancelDrop() {
-  // stop pinging
-  if (pingInterval !== null) {
-    clearInterval(pingInterval);
-    pingInterval = null;
-  }
-
-  // close data channel
-  if (dc !== null) {
-    dc.close();
-    dc = null;
-  }
-
-  // close peer connection
-  if (peer !== null) {
-    peer.close();
-    peer = null;
-  }
-}
+let dropper = null;
 
 // NOTE: the eventCallback argument should be a function of the form:
 //   eventCallback(name, data)
 // Where eventName is any of the following:
-export function drop(file, eventCallback) {
-  if (peer !== null) {
-    console.log('Error: A peer connection already exists.');
-    return;
-  } else {
-    console.log('Running drop');
+export function drop(files, eventCallback) {
+  if (dropper !== null) {
+    return; // only one dropper at a time
   }
 
-  // open peer connection as dropper
-  peer = new Peer();
-  dc = new DataChannel(peer, 'file');
+  dropper = new Dropper(files[0]);
 
-  dc.addEventListener('message', (event) => {
-    console.log(event.data);
-  });
-
-  dc.addEventListener('open', () => {
-    if (pingInterval === null) {
-      pingInterval = setInterval(() => {
-        dc.send('ping'); // send ping
-        eventCallback('pinged');
-      }, 1000); // 1s
-    }
-  });
-
-  dc.addEventListener('close', () => {
-    if (pingInterval !== null) {
-      clearInterval(pingInterval);
-      pingInterval = null;
-    }
-  });
-
-  peer.addEventListener('registered', (event) => {
+  // add event listeners (triggers eventCallback)
+  dropper.addEventListener('registered', (event) => {
     eventCallback('registered', event.data);
   });
-
-  peer.addEventListener('failed', () => {
-    eventCallback('failed');
-    cancelDrop();
+  dropper.addEventListener('open', () => {
+    eventCallback('open');
   });
-
-  peer.addEventListener('connected', () => {
-    eventCallback('connected');
+  dropper.addEventListener('close', () => {
+    eventCallback('close');
   });
-
-  peer.addEventListener('disconnected', () => {
-    eventCallback('disconnected');
-
-    if (pingInterval !== null) {
-      clearInterval(pingInterval);
-      pingInterval = null;
-    }
+  dropper.addEventListener('bytes', (event) => {
+    eventCallback('bytes', event.data);
+  });
+  dropper.addEventListener('done', () => {
+    eventCallback('done');
   });
 }
