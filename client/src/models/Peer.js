@@ -5,6 +5,9 @@
 
 import { SignalChannel } from './SignalChannel.js';
 
+const _turnUsername = process.env.REACT_APP_TURN_USERNAME;
+const _turnCredential = process.env.REACT_APP_TURN_CREDENTIAL;
+
 // STUN and TURN server configuration for RTCPeerConnection
 const _configuration = {
   iceServers: [
@@ -25,8 +28,8 @@ const _configuration = {
     {
       // droppr TURN server
       urls: 'turn:relay.droppr.net:5051',
-      username: 'droppr',
-      credential: 'p2pfiletransfer'
+      username: _turnUsername,
+      credential: _turnCredential
     }
   ]
 };
@@ -78,9 +81,8 @@ export class Peer extends EventTarget {
 
   // private fields
 
-  _sc; // the signal channel connection
-  _rtc; // the WebRTC peer connection
-  _dc; // the data channel for the WebRTC peer connection
+  _signalChannel; // the signal channel connection
+  _peerConnection; // the WebRTC peer connection
 
   _isDropper; // whether this instance is the dropper (not the connected peer)
 
@@ -96,72 +98,93 @@ export class Peer extends EventTarget {
     this._isDropper = id === undefined;
 
     // init communication objects
-    this._sc = new SignalChannel(id, this._isDropper);
-    this._rtc = new RTCPeerConnection(_configuration);
+    this._signalChannel = new SignalChannel(id, this._isDropper);
+    this._peerConnection = new RTCPeerConnection(_configuration);
 
     // init public fields
     this.id = id;
 
     // event listeners
-    this._scAddEventListeners();
+    this._signalChannelAddEventListeners();
 
     // WebRTC peer connection event listeners
-    this._rtc.addEventListener(
+    this._peerConnection.addEventListener(
       'negotiationneeded',
       this._onNegotiationNeeded.bind(this)
     );
-    this._rtc.addEventListener(
+    this._peerConnection.addEventListener(
       'iceconnectionstatechange',
       this._onIceConnectionStateChange.bind(this)
     );
-    this._rtc.addEventListener(
+    this._peerConnection.addEventListener(
       'connectionstatechange',
       this._onConnectionStateChange.bind(this)
     );
-    this._rtc.addEventListener('icecandidate', this._onIceCandidate.bind(this));
-    this._rtc.addEventListener('datachannel', this._onDataChannel.bind(this));
+    this._peerConnection.addEventListener(
+      'icecandidate',
+      this._onIceCandidate.bind(this)
+    );
+    this._peerConnection.addEventListener(
+      'datachannel',
+      this._onDataChannel.bind(this)
+    );
   }
 
   // private methods
 
-  _scAddEventListeners() {
+  _signalChannelAddEventListeners() {
     // add event listeners for the signal channel
-    this._sc.addEventListener('registered', this._onScRegistered.bind(this));
-    this._sc.addEventListener('failed', this._onScFailed.bind(this));
-    this._sc.addEventListener('connected', this._onScConnected.bind(this));
-    this._sc.addEventListener(
-      'disconnected',
-      this._onScDisconnected.bind(this)
+    this._signalChannel.addEventListener(
+      'registered',
+      this._onSignalChannelRegistered.bind(this)
     );
-    this._sc.addEventListener('close', this._onScClose.bind(this));
-    this._sc.addEventListener('message', this._onScMessage.bind(this));
+    this._signalChannel.addEventListener(
+      'failed',
+      this._onSignalChannelFailed.bind(this)
+    );
+    this._signalChannel.addEventListener(
+      'connected',
+      this._onSignalChannelConnected.bind(this)
+    );
+    this._signalChannel.addEventListener(
+      'disconnected',
+      this._onSignalChannelDisconnected.bind(this)
+    );
+    this._signalChannel.addEventListener(
+      'close',
+      this._onSignalChannelClose.bind(this)
+    );
+    this._signalChannel.addEventListener(
+      'message',
+      this._onSignalChannelMessage.bind(this)
+    );
   }
 
-  _onScRegistered(event) {
+  _onSignalChannelRegistered(event) {
     // store the drop identifier internally
     this.id = event.data;
     this.dispatchEvent(new MessageEvent('registered', { data: event.data }));
   }
 
-  _onScFailed() {
+  _onSignalChannelFailed() {
     // signal channel failure is a fatal error
     this.dispatchEvent(new Event('failed'));
     this.close(); // don't attempt to reconnect
   }
 
-  async _onScConnected() {
+  async _onSignalChannelConnected() {
     // if dropper, send an RTC peer connection offer
     if (this._isDropper) {
       try {
         // the dropper should send the initial offer
-        const offer = await this._rtc.createOffer({
+        const offer = await this._peerConnection.createOffer({
           iceRestart: this._iceRestart
         });
-        this._rtc.setLocalDescription(offer);
+        this._peerConnection.setLocalDescription(offer);
 
         // send the offer to the recipient
         const packet = { type: 'offer', offer };
-        this._sc.send(JSON.stringify(packet));
+        this._signalChannel.send(JSON.stringify(packet));
       } catch (err) {
         // log the caught error
         console.log(err);
@@ -169,18 +192,18 @@ export class Peer extends EventTarget {
     }
   }
 
-  _onScDisconnected() {
+  _onSignalChannelDisconnected() {
     // the signal channel will automatically reconnect;
     // when reconnected, ICE gathering should restart
     this._iceRestart = true;
   }
 
-  _onScClose() {
+  _onSignalChannelClose() {
     // next open of the signal channel should restart the ICE gathering process
     this._iceRestart = true;
   }
 
-  async _onScMessage(event) {
+  async _onSignalChannelMessage(event) {
     try {
       const message = event.data;
 
@@ -188,22 +211,22 @@ export class Peer extends EventTarget {
         // received an RTC peer connection offer
         case 'offer':
           // set remote description
-          this._rtc.setRemoteDescription(message.offer);
+          this._peerConnection.setRemoteDescription(message.offer);
 
           // prepare answer
-          const answer = await this._rtc.createAnswer();
-          this._rtc.setLocalDescription(answer);
+          const answer = await this._peerConnection.createAnswer();
+          this._peerConnection.setLocalDescription(answer);
 
           // send the answer to the dropper
           const packet = { type: 'answer', answer };
-          this._sc.send(JSON.stringify(packet));
+          this._signalChannel.send(JSON.stringify(packet));
 
           break;
 
         // received an RTC peer connection answer
         case 'answer':
           // set remote description
-          this._rtc.setRemoteDescription(message.answer);
+          this._peerConnection.setRemoteDescription(message.answer);
 
           break;
 
@@ -215,13 +238,13 @@ export class Peer extends EventTarget {
 
             // close signal channel if there are no more candidates
             if (!this._moreCandidates) {
-              this._sc.close();
-              this._sc = null;
+              this._signalChannel.close();
+              this._signalChannel = null;
             }
           }
 
           // if message.candidate is null, this signals end-of-candidates
-          this._rtc.addIceCandidate(message.candidate);
+          this._peerConnection.addIceCandidate(message.candidate);
 
           break;
 
@@ -237,10 +260,10 @@ export class Peer extends EventTarget {
   }
 
   _restart() {
-    if (this._sc === null) {
+    if (this._signalChannel === null) {
       // open the signal channel and add event listeners
-      this._sc = new SignalChannel(this.id, this._isDropper);
-      this._scAddEventListeners();
+      this._signalChannel = new SignalChannel(this.id, this._isDropper);
+      this._signalChannelAddEventListeners();
 
       // there will be more and possibly new ICE candidates
       this._moreCandidates = true;
@@ -254,13 +277,13 @@ export class Peer extends EventTarget {
 
   _onIceConnectionStateChange() {
     console.log(
-      `Peer: Info: ICE connection state change: ${this._rtc.iceConnectionState}`
+      `Peer: Info: ICE connection state change: ${this._peerConnection.iceConnectionState}`
     );
 
     // check for a disconnected or failed state
     if (
-      this._rtc.iceConnectionState === 'disconnected' ||
-      this._rtc.iceConnectionState === 'failed'
+      this._peerConnection.iceConnectionState === 'disconnected' ||
+      this._peerConnection.iceConnectionState === 'failed'
     ) {
       this.dispatchEvent(new Event('disconnected'));
       this._restart();
@@ -269,17 +292,17 @@ export class Peer extends EventTarget {
 
   _onConnectionStateChange() {
     console.log(
-      `Peer: Info: Connection state change: ${this._rtc.connectionState}`
+      `Peer: Info: Connection state change: ${this._peerConnection.connectionState}`
     );
 
     // WebRTC is connected
-    if (this._rtc.connectionState === 'connected') {
+    if (this._peerConnection.connectionState === 'connected') {
       this.dispatchEvent(new Event('connected'));
 
       // check for a disconnected or failed state
     } else if (
-      this._rtc.connectionState === 'disconnected' ||
-      this._rtc.connectionState === 'failed'
+      this._peerConnection.connectionState === 'disconnected' ||
+      this._peerConnection.connectionState === 'failed'
     ) {
       this.dispatchEvent(new Event('disconnected'));
       this._restart();
@@ -289,7 +312,7 @@ export class Peer extends EventTarget {
   _onIceCandidate(event) {
     try {
       const packet = { type: 'candidate', candidate: event.candidate };
-      this._sc.send(JSON.stringify(packet));
+      this._signalChannel.send(JSON.stringify(packet));
 
       // check for end-of-candidates signal
       if (event.candidate === null) {
@@ -297,8 +320,8 @@ export class Peer extends EventTarget {
 
         // close signal channel if the peer has no more candidates
         if (!this._morePeerCandidates) {
-          this._sc.close();
-          this._sc = null;
+          this._signalChannel.close();
+          this._signalChannel = null;
         }
       }
     } catch (err) {
@@ -316,19 +339,19 @@ export class Peer extends EventTarget {
 
   close() {
     // close the WebRTC connection
-    if (this._rtc !== null) {
-      this._rtc.close();
-      this._rtc = null;
+    if (this._peerConnection !== null) {
+      this._peerConnection.close();
+      this._peerConnection = null;
     }
 
     // close the signal channel
-    if (this._sc !== null) {
-      this._sc.close();
-      this._sc = null;
+    if (this._signalChannel !== null) {
+      this._signalChannel.close();
+      this._signalChannel = null;
     }
   }
 
   createDataChannel(label) {
-    return this._rtc.createDataChannel(label);
+    return this._peerConnection.createDataChannel(label);
   }
 }

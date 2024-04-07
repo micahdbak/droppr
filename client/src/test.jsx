@@ -78,6 +78,11 @@ export function Test() {
         case 'close':
           setStatus('disconnected');
 
+        case 'bytes':
+          setStatus(`bytes got: ${_data}`);
+
+          break;
+
         case 'download':
           setDownload(_data);
           setStatus('done');

@@ -35,7 +35,7 @@ export class Dropper extends EventTarget {
   // private fields
 
   _peer = null; // the peer connection
-  _dc = null; // the data channel
+  _dataChannel = null; // the data channel
   _file = null; // the file to be sent
   _state = 'fileinfo'; // the current state
   _start = 0; // the position in the file
@@ -47,7 +47,7 @@ export class Dropper extends EventTarget {
 
     // initialize things
     this._peer = new Peer();
-    this._dc = this._peer.createDataChannel('droppr');
+    this._dataChannel = this._peer.createDataChannel('droppr');
     this._file = file;
 
     // dispatch registered event when it happens
@@ -56,28 +56,37 @@ export class Dropper extends EventTarget {
     });
 
     // event listeners for data channel
-    this._dc.addEventListener('message', this._onDcMessage.bind(this));
-    this._dc.addEventListener('open', this._nextMessage.bind(this));
-    this._dc.addEventListener(
+    this._dataChannel.addEventListener(
+      'message',
+      this._onDataChannelMessage.bind(this)
+    );
+    this._dataChannel.addEventListener('open', this._nextMessage.bind(this));
+    this._dataChannel.addEventListener(
       'bufferedamountlow',
       this._nextMessage.bind(this)
     );
 
     // for notification purposes
-    this._dc.addEventListener('open', this._onDcOpen.bind(this));
-    this._dc.addEventListener('close', this._onDcClose.bind(this));
+    this._dataChannel.addEventListener(
+      'open',
+      this._onDataChannelOpen.bind(this)
+    );
+    this._dataChannel.addEventListener(
+      'close',
+      this._onDataChannelClose.bind(this)
+    );
   }
 
   // private methods
 
-  _onDcMessage(event) {
+  _onDataChannelMessage(event) {
     try {
       const message = JSON.parse(event.data);
 
       if (message.type === 'received') {
         // close the data channel
-        this._dc.close();
-        this._dc = null;
+        this._dataChannel.close();
+        this._dataChannel = null;
 
         // close the WebRTC peer connection
         this._peer.close();
@@ -87,10 +96,14 @@ export class Dropper extends EventTarget {
         this.dispatchEvent(new Event('done'));
       } else {
         // unexpected message; log it
-        console.log(`Dropper: Message in Dropper._onDcMessage: ${event.data}`);
+        console.log(
+          `Dropper: Message in Dropper._onDataChannelMessage: ${event.data}`
+        );
       }
     } catch (err) {
-      console.log(`Dropper: Error in Dropper._onDcMessage: ${err.toString()}`);
+      console.log(
+        `Dropper: Error in Dropper._onDataChannelMessage: ${err.toString()}`
+      );
     }
   }
 
@@ -101,7 +114,7 @@ export class Dropper extends EventTarget {
         case 'send':
           // check if done sending file
           if (this._start >= this._file.size) {
-            this._dc.send('{"type":"done"}');
+            this._dataChannel.send('{"type":"done"}');
             this._state = 'done';
           }
 
@@ -117,9 +130,9 @@ export class Dropper extends EventTarget {
           this._start = end;
 
           // get buffer and send it through the data channel
-          // NOTE: this._dc will dispatch bufferedamountlow when done
+          // NOTE: this._dataChannel will dispatch bufferedamountlow when done
           let buffer = await blob.arrayBuffer();
-          this._dc.send(buffer);
+          this._dataChannel.send(buffer);
 
           // dispatch byte count update
           this.dispatchEvent(new MessageEvent('bytes', { data: this._start }));
@@ -143,7 +156,7 @@ export class Dropper extends EventTarget {
             }
           };
 
-          this._dc.send(JSON.stringify(packet));
+          this._dataChannel.send(JSON.stringify(packet));
           this._state = 'send';
 
           break;
@@ -162,11 +175,11 @@ export class Dropper extends EventTarget {
     }
   }
 
-  _onDcOpen() {
+  _onDataChannelOpen() {
     this.dispatchEvent(new Event('open'));
   }
 
-  _onDcClose() {
+  _onDataChannelClose() {
     this.dispatchEvent(new Event('close'));
   }
 }

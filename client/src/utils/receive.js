@@ -27,6 +27,9 @@ export function receive(id, eventCallback) {
   recipient.addEventListener('close', () => {
     eventCallback('close');
   });
+  recipient.addEventListener('bytes', (event) => {
+    eventCallback('bytes', event.data);
+  });
   recipient.addEventListener('download', (event) => {
     eventCallback('download', event.data);
   });

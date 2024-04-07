@@ -46,7 +46,7 @@ export class DataChannel extends EventTarget {
 
   _peer = null; // the peer for which this data channel exists
   _label = 'droppr'; // the label of the data channel
-  _dc = null; // RTCDataChannel
+  _dataChannel = null; // RTCDataChannel
   _open = false; // whether the data channel is open
   _buffer = []; // the internal buffer of unsent data
 
@@ -57,39 +57,48 @@ export class DataChannel extends EventTarget {
 
     this._peer = peer;
     this._label = label;
-    this._dc = this._peer.createDataChannel();
-    this._dcConfigure();
+    this._dataChannel = this._peer.createDataChannel();
+    this._dataChannelConfigure();
 
     // on disconnect, reconfigure the data channel
     this._peer.addEventListener('disconnected', () => {
-      if (this._dc !== null) {
-        this._dc.close();
-        this._dc = null;
+      if (this._dataChannel !== null) {
+        this._dataChannel.close();
+        this._dataChannel = null;
       }
 
-      this._dc = this._peer.createDataChannel(this._label);
-      this._dcConfigure();
+      this._dataChannel = this._peer.createDataChannel(this._label);
+      this._dataChannelConfigure();
     });
   }
 
   // private methods
 
-  _dcConfigure() {
-    this._dc.binaryType = 'arraybuffer'; // receive as ArrayBuffers
-    this._dc.addEventListener('message', this._onDcMessage.bind(this));
-    this._dc.addEventListener('open', this._onDcOpen.bind(this));
-    this._dc.addEventListener('close', this._onDcClose.bind(this));
-    this._dc.addEventListener(
+  _dataChannelConfigure() {
+    this._dataChannel.binaryType = 'arraybuffer'; // receive as ArrayBuffers
+    this._dataChannel.addEventListener(
+      'message',
+      this._onDataChannelMessage.bind(this)
+    );
+    this._dataChannel.addEventListener(
+      'open',
+      this._onDataChannelOpen.bind(this)
+    );
+    this._dataChannel.addEventListener(
+      'close',
+      this._onDataChannelClose.bind(this)
+    );
+    this._dataChannel.addEventListener(
       'bufferedamountlow',
-      this._onDcBufferedAmountLow.bind(this)
+      this._onDataChannelBufferedAmountLow.bind(this)
     );
   }
 
-  _onDcMessage(event) {
+  _onDataChannelMessage(event) {
     this.dispatchEvent(new MessageEvent('message', { data: event.data }));
   }
 
-  _onDcOpen(event) {
+  _onDataChannelOpen(event) {
     this._open = true;
 
     // dispatch open event (data will flow)
@@ -98,18 +107,18 @@ export class DataChannel extends EventTarget {
     // if the buffer has data, send it through the data channel
     // (this data was lost when the data channel was closed)
     this._buffer.forEach((data) => {
-      this._dc.send(data);
+      this._dataChannel.send(data);
     });
   }
 
-  _onDcClose(event) {
+  _onDataChannelClose(event) {
     this._open = false;
 
     // dispatch close event (data won't flow)
     this.dispatchEvent(new Event('close'));
   }
 
-  _onDcBufferedAmountLow() {
+  _onDataChannelBufferedAmountLow() {
     // empty the backup buffer; all messages were sent
     this._buffer = [];
 
@@ -125,15 +134,15 @@ export class DataChannel extends EventTarget {
 
     // only send the data if the data channel is open
     if (this._open) {
-      this._dc.send(data);
+      this._dataChannel.send(data);
     }
   }
 
   close() {
     // close the data channel, if it exists
-    if (this._dc !== null) {
-      this._dc.close();
-      this._dc = null;
+    if (this._dataChannel !== null) {
+      this._dataChannel.close();
+      this._dataChannel = null;
     }
 
     // empty the buffer, if it has data in it
@@ -143,8 +152,8 @@ export class DataChannel extends EventTarget {
   }
 
   get bufferedAmount() {
-    if (this._dc !== null) {
-      return this._dc.bufferedAmount;
+    if (this._dataChannel !== null) {
+      return this._dataChannel.bufferedAmount;
     } else {
       return 0;
     }

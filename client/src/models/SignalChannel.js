@@ -4,15 +4,13 @@
 // SignalChannel.js
 
 // get current environment variables
-const _wsScheme = process.env.REACT_APP_SC_WS_SCHEME;
+const _webSocketScheme = process.env.REACT_APP_SC_WS_SCHEME;
 //const _restScheme = process.env.REACT_APP_SC_REST_SCHEME;
 const _host = process.env.REACT_APP_SC_HOST;
 const _pingRate = process.env.REACT_APP_SC_PING_RATE;
 
-const _wsRoot = _wsScheme + '://' + _host;
+const _webSocketRoot = _webSocketScheme + '://' + _host;
 //const _restRoot = _restScheme + '://' + _host;
-
-let _sc;
 
 /* SignalChannel - Register a drop identifier and communicate with an inter-
  *                 ested peer. Uses WebSocket connections and a known host.
@@ -64,7 +62,7 @@ export class SignalChannel extends EventTarget {
 
   // private fields
 
-  _ws = null; // the WebSocket connection to the signal channel server
+  _webSocket = null; // the WebSocket connection to the signal channel server
 
   _isDropper; // whether this connection is for a dropper
 
@@ -80,32 +78,38 @@ export class SignalChannel extends EventTarget {
 
     if (id === undefined) {
       // attempt to connect to the signal channel as a new drop
-      this._ws = new WebSocket(_wsRoot + '/drop/');
+      this._webSocket = new WebSocket(_webSocketRoot + '/drop/');
     } else {
       this.id = id;
 
       if (isDropper) {
         // attempt to connect to the signal channel as a dropper
-        this._ws = new WebSocket(_wsRoot + '/drop/' + this.id);
+        this._webSocket = new WebSocket(_webSocketRoot + '/drop/' + this.id);
       } else {
         // attempt to connect to the signal channel as a recipient
-        this._ws = new WebSocket(_wsRoot + '/receive/' + this.id);
+        this._webSocket = new WebSocket(_webSocketRoot + '/receive/' + this.id);
       }
     }
 
     this._persist = true;
 
     // add event listeners for open, close, and message events
-    this._ws.addEventListener('open', this._onWsOpen.bind(this));
-    this._ws.addEventListener('close', this._onWsClose.bind(this));
-    this._ws.addEventListener('message', this._onWsMessage.bind(this));
+    this._webSocket.addEventListener('open', this._onWebSocketOpen.bind(this));
+    this._webSocket.addEventListener(
+      'close',
+      this._onWebSocketClose.bind(this)
+    );
+    this._webSocket.addEventListener(
+      'message',
+      this._onWebSocketMessage.bind(this)
+    );
   }
 
   // private methods
 
   _ping() {
     // if WebSocket is closed
-    if (this._ws === null) {
+    if (this._webSocket === null) {
       // clear this interval
       clearInterval(this._pingInterval);
       this._pingInterval = null;
@@ -114,18 +118,18 @@ export class SignalChannel extends EventTarget {
       return;
     }
 
-    this._ws.send('"ping"');
+    this._webSocket.send('"ping"');
   }
 
-  _onWsOpen() {
+  _onWebSocketOpen() {
     // start pinging
     if (this._pingInterval === null) {
       this._pingInterval = setInterval(this._ping.bind(this), _pingRate);
     }
   }
 
-  _onWsClose() {
-    this._ws = null; // free resources
+  _onWebSocketClose() {
+    this._webSocket = null; // free resources
 
     if (this._pingInterval !== null) {
       // clear the ping interval
@@ -139,15 +143,15 @@ export class SignalChannel extends EventTarget {
 
       // attempt to reconnect to the signal channel
       if (this._isDropper) {
-        this._ws = new WebSocket(_wsRoot + '/drop/' + this.id);
+        this._webSocket = new WebSocket(_webSocketRoot + '/drop/' + this.id);
       } else {
-        this._ws = new WebSocket(_wsRoot + '/receive/' + this.id);
+        this._webSocket = new WebSocket(_webSocketRoot + '/receive/' + this.id);
       }
 
       // add event listeners for open, close, and message events
-      this._ws.addEventListener('open', this._onWsOpen);
-      this._ws.addEventListener('close', this._onWsClose);
-      this._ws.addEventListener('message', this._onWsMessage);
+      this._webSocket.addEventListener('open', this._onWebSocketOpen);
+      this._webSocket.addEventListener('close', this._onWebSocketClose);
+      this._webSocket.addEventListener('message', this._onWebSocketMessage);
 
       // shouldn't reconnect; intentional close
     } else {
@@ -155,7 +159,7 @@ export class SignalChannel extends EventTarget {
     }
   }
 
-  _onWsMessage(event) {
+  _onWebSocketMessage(event) {
     try {
       const message = JSON.parse(event.data);
 
@@ -181,7 +185,7 @@ export class SignalChannel extends EventTarget {
           }
 
           if (message === 'ping') {
-            this._ws.send('"pong"'); // send pong
+            this._webSocket.send('"pong"'); // send pong
           }
         } else {
           throw new Error('Bad message.');
@@ -265,11 +269,11 @@ export class SignalChannel extends EventTarget {
 
   send(data) {
     // don't send the message when not connected
-    if (this._ws === null || this._pingInterval !== null) {
+    if (this._webSocket === null || this._pingInterval !== null) {
       throw new Error('Not connected.');
     }
 
-    this._ws.send(data);
+    this._webSocket.send(data);
   }
 
   close() {
@@ -283,9 +287,9 @@ export class SignalChannel extends EventTarget {
     }
 
     // close the WebSocket connection
-    if (this._ws !== null) {
-      this._ws.close();
-      this._ws = null;
+    if (this._webSocket !== null) {
+      this._webSocket.close();
+      this._webSocket = null;
     }
   }
 }

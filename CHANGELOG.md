@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - SignalChannel, Peer, and DataChannel models for client.
-- Dropper, Recipient models, and utilities for file transfer.
+- Dropper, Recipient models, and various utilities for client.
+- FileStore model for client.
 
 ### Changed
 
