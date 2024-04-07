@@ -3,7 +3,6 @@
 // models/
 // index.js
 
-export * from './DataChannel.js';
 export * from './Dropper.js';
 export * from './FileStore.js';
 export * from './Peer.js';
