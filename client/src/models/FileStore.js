@@ -15,11 +15,11 @@ const _databaseVersion = 1;
  * clearFile(name, size)
  * - clear all blobs for a file
  *
- * addBlob(filename, offset, data)
- * - add blob data for a file
+ * addBlob(label, offset, blob)
+ * - add blob for a file
  *
- * getFile(filename)
- * - get a combined blob for a given filename
+ * getFile(label)
+ * - get a combined blob for a given label
  *
  * close()
  * - close the database connection
@@ -51,9 +51,9 @@ export class FileStore extends EventTarget {
     });
 
     openRequest.addEventListener('upgradeneeded', (event) => {
-      // object store for blobs with filename and offset as keys
+      // object store for blobs with label and offset as keys
       event.target.result.createObjectStore('blobs', {
-        keyPath: ['filename', 'offset']
+        keyPath: ['label', 'offset']
       });
     });
 
@@ -96,16 +96,16 @@ export class FileStore extends EventTarget {
   }
 
   // add blob data for a file
-  addBlob(filename, offset, data) {
+  addBlob(label, offset, blob) {
     // return the IDBRequest for this transaction
     return this._database
       .transaction(['blobs'], 'readwrite')
       .objectStore('blobs')
-      .add({ filename, offset, data });
+      .add({ label, offset, blob });
   }
 
-  // get a combined blob for a given filename
-  async getFile(name, size, type) {
+  // get a combined blob for a given label
+  async getFile(label, size, type) {
     // start a read-only transaction on the blobs object store
     const transaction = this._database.transaction(['blobs'], 'readonly');
     const blobs = transaction.objectStore('blobs');
@@ -113,7 +113,7 @@ export class FileStore extends EventTarget {
     let combinedBlob = null;
 
     // get an offset range for each item in the object store for this file
-    const offsetRange = IDBKeyRange.bound([name, 0], [name, size]);
+    const offsetRange = IDBKeyRange.bound([label, 0], [label, size]);
 
     // start a cursor request given the offset range
     const cursorRequest = blobs.openCursor(offsetRange);
@@ -123,7 +123,7 @@ export class FileStore extends EventTarget {
       const cursor = event.target.result;
 
       if (cursor) {
-        const blob = cursor.value.data;
+        const blob = cursor.value.blob;
         const offset = cursor.key[1];
 
         if (combinedBlob === null) {
