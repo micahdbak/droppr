@@ -41,8 +41,11 @@ export class FileStream extends EventTarget {
   constructor(peer, file) {
     super();
 
-    // initialize things
-    this.label = uuid.v4(); // generate a UUID for this file
+    // generate a unique UUID for this file
+    this.label = uuid.v4();
+
+    console.log(`FileStream: Creating data channel with label ${this.label}`);
+
     this._dataChannel = peer.createDataChannel(this.label);
     this._file = file;
 
@@ -80,7 +83,7 @@ export class FileStream extends EventTarget {
           // check if done sending file
           if (this._offset >= this._file.size) {
             this._dataChannel.send('{"type":"done"}'); // send done message
-            this._dataChannel.close(); // this channel can be closed now
+            // let recipient close the connection
 
             // set state to done
             this._state = 'done';
@@ -119,7 +122,7 @@ export class FileStream extends EventTarget {
         // 'sending', 'done', ...
         default:
           console.log(
-            `FileStream: Passing state '${this._state}' in Droppr._sendMessage.`
+            `FileStream: Passing state '${this._state}' in _sendMessage.`
           );
 
           // pass
@@ -127,7 +130,7 @@ export class FileStream extends EventTarget {
           break;
       }
     } catch (err) {
-      console.log(`FileStream: Error in FileStream._sendMessage: ${err.toString()}`);
+      console.log(`FileStream: Error in _sendMessage: ${err.toString()}`);
     }
   }
 }

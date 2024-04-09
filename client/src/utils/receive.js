@@ -18,17 +18,17 @@ export function receive(id, eventCallback) {
   recipient = new Recipient(id);
 
   // add event listeners (triggers eventCallback)
-  recipient.addEventListener('open', () => {
-    eventCallback('open');
+  recipient.addEventListener('connected', (event) => {
+    eventCallback('connected');
+  });
+  recipient.addEventListener('disconnected', (event) => {
+    eventCallback('disconnected');
   });
   recipient.addEventListener('fileinfo', (event) => {
     eventCallback('fileinfo', event.data);
   });
-  recipient.addEventListener('close', () => {
-    eventCallback('close');
-  });
-  recipient.addEventListener('bytes', (event) => {
-    eventCallback('bytes', event.data);
+  recipient.addEventListener('offsetchanged', (event) => {
+    eventCallback('offsetchanged', event.data);
   });
   recipient.addEventListener('download', (event) => {
     eventCallback('download', event.data);

@@ -15,20 +15,25 @@ export function drop(files, eventCallback) {
     return; // only one dropper at a time
   }
 
-  dropper = new Dropper(files[0]);
+  dropper = new Dropper(files);
+
+  eventCallback('fileinfo', dropper.fileinfo);
 
   // add event listeners (triggers eventCallback)
   dropper.addEventListener('registered', (event) => {
     eventCallback('registered', event.data);
   });
-  dropper.addEventListener('open', () => {
-    eventCallback('open');
+  dropper.addEventListener('connected', (event) => {
+    eventCallback('connected');
   });
-  dropper.addEventListener('close', () => {
-    eventCallback('close');
+  dropper.addEventListener('disconnected', (event) => {
+    eventCallback('disconnected');
   });
-  dropper.addEventListener('bytes', (event) => {
-    eventCallback('bytes', event.data);
+  dropper.addEventListener('offsetchanged', (event) => {
+    eventCallback('offsetchanged', event.data);
+  });
+  dropper.addEventListener('failed', () => {
+    eventCallback('failed');
   });
   dropper.addEventListener('done', () => {
     eventCallback('done');

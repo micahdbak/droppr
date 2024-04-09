@@ -14,10 +14,21 @@ const _messageSize = parseInt(process.env.REACT_APP_MESSAGE_SIZE, 10);
  * constructor(files) - Register and start a drop for files.
  *   files: array of files to drop
  *
+ * public fields:
+ *
+ * fileinfo
+ *
  * dispatches events:
  *
  * 'registered' -> MessageEvent (event.data has the drop identifier.)
  * - The drop was registered, and a drop identifier was given.
+ *
+ * 'connected' -> Event
+ * - The recipient has connected.
+ *
+ * 'disconnected' -> Event
+ * - The recipient has disconnected, intentionally or unintentionally.
+ *   If unintentional, reconnection will be attempted immediately.
  *
  * 'offsetchanged' -> MessageEvent (event.data has attributes label, offset.)
  * - Offset changed; an update on the number of bytes sent for a given file.
@@ -36,7 +47,7 @@ export class Dropper extends EventTarget {
 
   // public fields
 
-  fileinfo = []; // information about the files being dropped
+  fileinfo = {}; // information about the files being dropped
 
   // constructor
 
@@ -52,27 +63,42 @@ export class Dropper extends EventTarget {
 
       fileStream.addEventListener('offsetchanged', (event) => {
         // dispatch offsetchanged event providing file label and the new offset
-        this.dispatchEvent(new MessageEvent('offsetchanged', {
-          data: {
-            label: event.target.label,
-            offset: event.data
-          }
-        }));
+        console.log('offsetchanged; ' + fileStream.label + ' ' + event.data);
+        this.dispatchEvent(
+          new MessageEvent('offsetchanged', {
+            data: {
+              label: fileStream.label,
+              offset: event.data
+            }
+          })
+        );
       });
 
-      this.fileinfo.push({
+      this.fileinfo[fileStream.label] = {
         name: files[i].name,
         size: files[i].size,
-        type: files[i].type,
-        label: fileStream.label
-      });
+        type: files[i].type
+      };
 
       this._fileStreams.push(fileStream);
     }
 
-    // dispatch registered event when it happens
+    // add event listeners
     this._peer.addEventListener('registered', (event) => {
       this.dispatchEvent(new MessageEvent('registered', { data: event.data }));
+    });
+    this._peer.addEventListener('connected', () => {
+      console.log('Dropper: Connected');
+
+      // dispatch connected event
+      this.dispatchEvent(new Event('connected'));
+    });
+    // on WebRTC peer connected disconnected
+    this._peer.addEventListener('disconnected', () => {
+      console.log('Dropper: Disconnected');
+
+      // dispatch disconnected event
+      this.dispatchEvent(new Event('disconnected'));
     });
 
     // watch file streams, and, when finished
@@ -84,7 +110,7 @@ export class Dropper extends EventTarget {
   async _awaitFileStreams() {
     try {
       // create a promise for each stream that resolves when each file is sent
-      const promises = this._fileStreams.map(fileStream => {
+      const promises = this._fileStreams.map((fileStream) => {
         return new Promise((resolve, reject) => {
           fileStream.addEventListener('done', resolve);
         });
@@ -95,7 +121,7 @@ export class Dropper extends EventTarget {
       // dispatch complete event
       this.dispatchEvent(new Event('done'));
     } catch (err) {
-      console.log(`Dropper: Got error while waiting for file streams: ${err.toString()}`);
+      console.log(`Dropper: Error in _awaitFileStreams: ${err.toString()}`);
       this.dispatchEvent(new Event('failed'));
     }
   }

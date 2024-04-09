@@ -12,7 +12,7 @@ const _turnCredential = process.env.REACT_APP_TURN_CREDENTIAL;
 const _configuration = {
   iceServers: [
     {
-      // Google STUN servers
+      // public Google STUN servers
       urls: [
         'stun:stun.l.google.com:19302',
         'stun:stun1.l.google.com:19302',
@@ -26,7 +26,7 @@ const _configuration = {
       urls: 'stun:relay.droppr.net:5051'
     },
     {
-      // droppr TURN server
+      // droppr TURN server (relay messages if peer-to-peer is impossible)
       urls: 'turn:relay.droppr.net:5051',
       username: _turnUsername,
       credential: _turnCredential
@@ -187,7 +187,9 @@ export class Peer extends EventTarget {
         this._signalChannel.send(JSON.stringify(packet));
       } catch (err) {
         // log the caught error
-        console.log(err);
+        console.log(
+          `Peer: Error in _onSignalChannelConnected: ${err.toString()}`
+        );
       }
     }
   }
@@ -249,13 +251,12 @@ export class Peer extends EventTarget {
           break;
 
         default:
-          console.log(`Peer: Warning: Got unexpected message: ${message}`);
+          console.log(`Peer: Got unexpected message: ${message}`);
 
           break;
       }
     } catch (err) {
-      console.log(err);
-      console.log(event.data);
+      console.log(`Peer: Error in _onSignalChannelMessage: ${err.toString()}`);
     }
   }
 
@@ -325,7 +326,7 @@ export class Peer extends EventTarget {
         }
       }
     } catch (err) {
-      console.log(err);
+      console.log(`Peer: Error in _onIceCandidate: ${err.toString()}`);
     }
   }
 

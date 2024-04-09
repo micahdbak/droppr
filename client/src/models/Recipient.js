@@ -14,21 +14,22 @@ import { FileStore, Peer } from './index.js';
  *
  * dispatches events:
  *
- * 'open' -> Event
- * - The connection is open. Data is now flowing.
+ * 'connected' -> Event
+ * - The dropper has connected.
  *
- * 'fileinfo' -> MessageEvent
- * - File information about what is being downloaded. Has name, size, and type
- *   fields.
+ * 'disconnected' -> Event
+ * - The dropper has disconnected, intentionally or unintentionally.
+ *   If unintentional, reconnection will be attempted immediately.
  *
- * 'close' -> Event
- * - The connection was closed. Will reconnect if file isn't received.
+ * 'fileinfo' -> MessageEvent (event.data: { label, name, size, type }.)
+ * - File information about a file that is being downloaded.
+ *   The label attribute is unique for each file being downloaded.
  *
- * 'bytes' -> MessageEvent (event.data has bytes got.)
- * - An update on the number of bytes got.
+ * 'offsetchanged' -> MessageEvent (event.data: { label, offset }.)
+ * - An update on the number of bytes got (offset).
  *
- * 'download' -> MessageEvent (event.data: { href, name, size, type }.)
- * - The file was downloaded
+ * 'download' -> MessageEvent (event.data: { label, name, size, type, href }.)
+ * - A file was downloaded successfully.
  */
 export class Recipient extends EventTarget {
   // private fields
@@ -36,60 +37,70 @@ export class Recipient extends EventTarget {
   _peer = null; // the peer connection
   _fileStore = null; // the file store
 
-  _fileinfo = {}; // label -> file information
-  _offset = {}; // label -> current offset
-  _blob = {}; // label -> pending blob
-  _request = {}; // label -> current database request
+  // these all map a given data channel label to...
+  _fileinfo = {}; // ...file information (name, size, type)
+  _blob = {}; // ...pending blob
+  _offset = {}; // ...current offset
+  _request = {}; // ...current database request
 
   // constructor
 
   constructor(id) {
     super();
 
+    this.id = id;
+
     // open the file store database
     this._fileStore = new FileStore();
 
     this._fileStore.addEventListener('error', (event) => {
-      console.log(`Recipient: Got error in file store: ${event.data}`);
+      console.log(`Recipient: Error in _fileStore: ${event.data}`);
     });
 
-    this._fileStore.addEventListener('open', () => {
-      // be ready to receive data only when the file store is ready
+    this._fileStore.addEventListener('open', this._receive.bind(this));
+  }
 
-      // open a peer connection with the dropper
-      this._peer = new Peer(id);
+  _receive() {
+    // open a peer connection with the dropper
+    this._peer = new Peer(this.id);
 
-      // on data channel negotiated
-      this._peer.addEventListener('datachannel', (event) => {
-        const dataChannel = event.channel;
+    // on data channel negotiated
+    this._peer.addEventListener('datachannel', (event) => {
+      const dataChannel = event.channel;
 
-        // make sure received messages are ArrayBuffers
-        dataChannel.binaryType = 'arraybuffer';
+      // make sure received messages are ArrayBuffers
+      dataChannel.binaryType = 'arraybuffer';
 
-        // add event listeners
-        dataChannel.addEventListener(
-          'message',
-          this._onDataChannelMessage.bind(this)
+      // add event listeners
+      dataChannel.addEventListener(
+        'message',
+        this._onDataChannelMessage.bind(this)
+      );
+      dataChannel.addEventListener('open', () => {
+        console.log(
+          'Recipient: Data channel opened with label ' + dataChannel.label
         );
-        dataChannel.addEventListener('open', () => {
-          console.log(
-            `Recipient: Data channel opened with label ${dataChannel.label}
-          `);
-        });
-        dataChannel.addEventListener('close', () => {
-          console.log(
-            `Recipient: Data channel closed with label ${dataChannel.label}
-          `);
-        });
-
-        // dataChannel will persist as it has event listeners attached to it
+      });
+      dataChannel.addEventListener('close', () => {
+        console.log(
+          'Recipient: Data channel closed with label ' + dataChannel.label
+        );
       });
 
-      // on WebRTC peer connected disconnected
-      this._peer.addEventListener('disconnected', () => {
-        console.log('Recipient: Disconnected');
-        // data channels should die; verify this?
-      });
+      // dataChannel will persist as it has event listeners attached to it
+    });
+    this._peer.addEventListener('connected', () => {
+      console.log('Recipient: Connected');
+
+      // dispatch connected event
+      this.dispatchEvent(new Event('connected'));
+    });
+    // on WebRTC peer connected disconnected
+    this._peer.addEventListener('disconnected', () => {
+      console.log('Recipient: Disconnected');
+
+      // dispatch disconnected event
+      this.dispatchEvent(new Event('disconnected'));
     });
   }
 
@@ -97,123 +108,159 @@ export class Recipient extends EventTarget {
     try {
       if (typeof event.data === 'string') {
         // receive the message, providing the label and data
-        this._receiveTextMessage(event.target.label, event.data);
+        this._receiveTextMessage(event.target.label, event);
       } else if (event.data instanceof ArrayBuffer) {
-        this._receiveArrayBuffer(event.target.label, event.data);
+        this._receiveArrayBuffer(event.target.label, event);
       } else {
-        throw new Error('Unexpected message');
+        throw new Error('Weird message');
       }
     } catch (err) {
       console.log(
-        `Recipient: Got error in _onDataChannelMessage: ${err.toString()}`
+        `Recipient: Error in _onDataChannelMessage: ${err.toString()}`
       );
     }
   }
 
-  async _download(label) {
-    // get the file
-    let file = await this._fileStore.getFile(
-      label,
-      this._fileinfo[label].size,
-      this._fileinfo[label].type
-    );
-
-    // create download link for file
-    const href = URL.createObjectURL(file);
-
-    file = null; // garbage
-
-    // dispatch event with download information
-    this.dispatchEvent(
-      new MessageEvent('download', { data: { href, ...this._fileinfo[label] } })
-    );
-  }
-
-  async _receiveTextMessage(label, data) {
+  async _receiveTextMessage(label, event) {
     // text messages should be JSON; attempt tp parse it
-    const message = JSON.parse(data);
+    const message = JSON.parse(event.data);
 
     switch (message.type) {
       case 'fileinfo':
-        this._fileinfo[label] = message.fileinfo;
-
+        // let caller know about the file being received
+        console.log(`Recipient: Got file information for data channel ${label}: ${JSON.stringify(message.fileinfo)}`);
         this.dispatchEvent(
-          new MessageEvent('fileinfo', { data: message.fileinfo })
+          new MessageEvent('fileinfo', {
+            data: { label, ...message.fileinfo }
+          })
         );
 
-        // next blobs should wait before adding to the database
-        this._request[label] = { readyState: 'pending' };
+        // initialize these things
+        this._fileinfo[label] = message.fileinfo;
+        this._blob[label] = null;
+        this._offset[label] = 0;
 
         // clear the file if it exists
-        await this._fileStore.clearFile(label, message.fileinfo.size);
-
-        // next blobs can be added to the database
-        this._request[label] = { readyState: 'done' };
+        this._request[label] = this._fileStore.clearFile(
+          label,
+          message.fileinfo.size
+        );
 
         break;
 
       case 'done':
-        this._dataChannel.send('{"type":"received"}');
+        // close the data channel, since we got the done message
+        event.target.close();
 
-        // close everything; drop is complete
+        console.log(`Recipient: Got done message for data channel ${label}`);
 
-        this._dataChannel.close();
-        this._dataChannel = null;
-
-        this._peer.close();
-        this._peer = null;
-
-        if (this._request.readyState === 'pending') {
+        // check if there is a pending file store request
+        if (this._request[label].readyState === 'pending') {
           try {
             // wait for this pending request to finish
             await new Promise((resolve, reject) => {
-              this._request.addEventListener('success', resolve);
-              this._request.addEventListener('error', reject);
+              this._request[label].addEventListener('success', resolve);
+              this._request[label].addEventListener('error', reject);
             });
           } catch (err) {
             console.log(
-              `Recipient: Got error when wrapping up: ${err.toString()}`
+              `Recipient: Error in _receiveTextMessage for pending request: ${err.toString()}`
             );
           }
         }
 
-        if (this._blob !== null) {
-          // add this blob to the file store
-          this._addBlobToFileStore();
+        // undefine it :sunglasses:
+        this._request[label] = undefined;
+
+        // check if there is a blob waiting to be added to the file store
+        if (this._blob[label] !== null) {
+          // start a new request adding this blob to the file store
+          const request = this._fileStore.addBlob(
+            label,
+            this._offset[label],
+            this._blob[label]
+          );
+
+          // dispatch offset changed event
+          this.dispatchEvent(
+            new MessageEvent('offsetchanged', {
+              data: { label, offset: this._fileinfo[label].size }
+            })
+          );
 
           try {
-            // wait until finished
+            // wait for this request to finish
             await new Promise((resolve, reject) => {
-              this._request.addEventListener('success', resolve);
-              this._request.addEventListener('error', reject);
+              request.addEventListener('success', resolve);
+              request.addEventListener('error', reject);
             });
           } catch (err) {
             console.log(
-              `Recipient: Got error when wrapping up: ${err.toString()}`
+              `Recipient: Error in _receiveTextMessage for pending blob: ${err.toString()}`
             );
           }
         }
 
-        // start download; will dispatch 'download' event when ready
-        this._download();
+        // undefine these :sunglasses:
+        this._blob[label] = undefined;
+        this._offset[label] = undefined;
+
+        // start download; will dispatch 'download' event when finished
+
+        console.log(`starting download ${label}`);
+
+        // get the file
+        let file = await this._fileStore.getFile(
+          label,
+          this._fileinfo[label].size,
+          this._fileinfo[label].type
+        );
+
+        console.log(`got file ${label}`);
+
+        // create download link for file
+        const href = URL.createObjectURL(file);
+
+        file = null; // garbage
+
+        // dispatch event with download information
+        this.dispatchEvent(
+          new MessageEvent('download', {
+            // has attributes label, name, size, type, href
+            data: { label, ...this._fileinfo[label], href }
+          })
+        );
+
+        // undefine this :sunglasses:
+        this._fileinfo[label] = undefined;
+
+        // channel is closed, and all references for this label are undefined
+
+        break;
+
+      default:
+        console.log(`Recipient: Got unexpected message: ${event.data}`);
+
+        // pass
 
         break;
     }
   }
 
-  _receiveArrayBuffer(label, buffer) {
-    if (this._blob[label]) {
-      this._blob[label] = new Blob(
-        [this._blob[label], buffer],
-        { type: this._fileinfo[label].type }
-      );
+  _receiveArrayBuffer(label, event) {
+    if (this._blob[label] !== null) {
+      // append the incoming data to the pending blob
+      this._blob[label] = new Blob([this._blob[label], event.data], {
+        type: this._fileinfo[label].type
+      });
     } else {
-      this._blob[label] = new Blob(
-        [buffer],
-        { type: this._fileinfo[label].type }
-      );
+      // create new blob with just the incoming data
+      this._blob[label] = new Blob([event.data], {
+        type: this._fileinfo[label].type
+      });
     }
 
+    // check for last request
     let request = this._request[label];
 
     if (request && request.readyState === 'done') {
@@ -226,7 +273,8 @@ export class Recipient extends EventTarget {
 
       request.addEventListener('error', (event) => {
         console.log(
-          `Recipient: Got error in _addBlobToFileStore: ${event.target.error.toString()}`
+          'Recipient: Error in _receiveArrayBuffer: ' +
+            event.target.error.toString()
         );
       });
 
@@ -234,13 +282,17 @@ export class Recipient extends EventTarget {
       this._request[label] = request;
 
       // update the offset for this file
-      this._offset[label] += blob.size;
-      this._blob[label] = null; // clear
+      this._offset[label] += this._blob[label].size;
+      this._blob[label] = null; // clear the blob
+
+      console.log('offsetchanged; ' + label + ' ' + this._offset[label]);
 
       // dispatch offset changed event
-      this.dispatchEvent(new MessageEvent('offsetchanged', {
-        data: { label, offset: this._offset[label] }
-      }));
+      this.dispatchEvent(
+        new MessageEvent('offsetchanged', {
+          data: { label, offset: this._offset[label] }
+        })
+      );
     }
   }
 }

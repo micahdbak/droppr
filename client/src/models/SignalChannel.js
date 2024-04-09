@@ -260,8 +260,9 @@ export class SignalChannel extends EventTarget {
       }
     } catch (err) {
       // log the error to console
-      console.log(err);
-      console.log(event.data);
+      console.log(
+        `SignalChannel: Error in _onWebSocketMessage: ${err.toString()}`
+      );
     }
   }
 

@@ -6,144 +6,187 @@ import React, { useState } from 'react';
 import { drop, receive } from './utils/index.js';
 
 export function Test() {
-  const [isDropper, setIsDropper] = useState(true);
-  const [file, setFile] = useState(null);
-  const [status, setStatus] = useState('waiting');
+  const [download, setDownload] = useState({});
+  const [files, setFiles] = useState([]);
+  const [fileinfo, setFileinfo] = useState({});
   const [id, setId] = useState('');
-  const [download, setDownload] = useState(null);
+  const [isDropper, setIsDropper] = useState(true);
+  const [status, setStatus] = useState('waiting');
+  const [summary, setSummary] = useState({});
 
-  let handleFile = (event) => {
-    setFile(event.target.files[0]);
-    setStatus('ready');
-  };
-
-  let handleId = (event) => {
-    setId(event.target.value);
-  };
-
-  let handleDrop = () => {
+  let startDropper = () => {
     // ready the drop
-    drop([file], (_status, _data) => {
+    drop(files, (_status, _data) => {
+      setStatus(_status);
+
       switch (_status) {
+        case 'fileinfo':
+          setFileinfo(_data);
+
+          break;
+
         case 'registered':
-          setStatus('registered');
           setId(_data);
 
           break;
 
-        case 'open':
-          setStatus('connected');
+        case 'offsetchanged':
+          setSummary((_summary) => {
+            _summary[_data.label] = _data.offset;
 
-          break;
-
-        case 'close':
-          if (status !== 'done') {
-            setStatus('disconnected');
-          }
-
-          break;
-
-        case 'bytes':
-          setStatus(`bytes sent: ${_data}`);
-
-          break;
-
-        case 'done':
-          setStatus('done');
+            return _summary;
+          });
 
           break;
 
         default:
-          setStatus(_status);
+          // pass
 
           break;
       }
     });
   };
 
-  let handleReceive = () => {
+  let startRecipient = () => {
     // prepare to receive
     receive(id, (_status, _data) => {
+      setStatus(_status);
+
       switch (_status) {
-        case 'open':
-          setStatus('connected');
-
-          break;
-
         case 'fileinfo':
-          setFile(_data);
+          setFileinfo((_fileinfo) => {
+            _fileinfo[_data.label] = {
+              name: _data.name,
+              size: _data.size,
+              type: _data.type
+            };
+
+            return _fileinfo;
+          });
 
           break;
 
-        case 'close':
-          setStatus('disconnected');
+        case 'offsetchanged':
+          setSummary((_summary) => {
+            _summary[_data.label] = _data.offset;
 
-        case 'bytes':
-          setStatus(`bytes got: ${_data}`);
+            return _summary;
+          });
 
           break;
 
         case 'download':
-          setDownload(_data);
-          setStatus('done');
+          console.log(`Got download ${JSON.stringify(_data)}`);
+          setDownload((_download) => {
+            _download[_data.label] = {
+              name: _data.name,
+              size: _data.size,
+              type: _data.type,
+              href: _data.href
+            };
+
+            return _download;
+          });
 
         default:
-          setStatus(_status);
+          // pass
 
           break;
       }
     });
   };
 
+  let handleFileInput = (event) => {
+    setFiles(Array.from(event.target.files));
+    setStatus('ready');
+  };
+
+  let handleIdInput = (event) => {
+    setId(event.target.value);
+  };
+
   return (
     <>
+      {/* header */}
       <h1>droppr - Test</h1>
       <p>(Acting as {isDropper ? 'dropper' : 'recipient'}.)</p>
-      <button onClick={() => setIsDropper(!isDropper)}>Switch</button>
-      <hr />
-      {file !== null ? (
+      {status === 'waiting' ? (
         <>
-          <p>Name: {file.name}</p>
-          <p>Size: {file.size}</p>
-          <p>Type: {file.type}</p>
+          <button onClick={() => setIsDropper(!isDropper)}>Switch</button>
+          <br />
         </>
       ) : (
         []
       )}
+      {/* display menu */}
       {isDropper ? (
         <>
           {status === 'waiting' ? (
-            <input type="file" onChange={handleFile} />
+            <input type="file" onChange={handleFileInput} multiple />
           ) : (
             []
           )}
-          {status === 'ready' && typeof file === 'object' ? (
-            <button onClick={handleDrop}>Register</button>
+          {status === 'ready' && files.length ? (
+            <button onClick={startDropper}>Register</button>
           ) : (
             []
           )}
-          {id !== '' ? <p>Drop identifier: {id}</p> : []}
+          {id !== '' ? <p>Dropping: {id}</p> : []}
         </>
       ) : status === 'waiting' ? (
         <>
-          <input type="text" onChange={handleId} />
-          <button onClick={handleReceive}>Receive</button>
+          <input type="text" onChange={handleIdInput} />
+          <button onClick={startRecipient}>Receive</button>
         </>
       ) : (
-        []
+        <p>Receiving: {id}</p>
       )}
       <hr />
-      {status}
-      {download !== null ? (
-        <>
-          <hr />
-          <a href={download.href} download={download.name}>
-            Download {download.name}.
-          </a>
-        </>
-      ) : (
-        []
-      )}
+      {/* display current status */}
+      <p>Status: {status}</p>
+      <hr />
+      {/* display all files or file infos */}
+      <p>Files:</p>
+      {files.length
+        ? files.map((file) => {
+            return <p>{file.name}, {file.size}, {file.type}</p>;
+          })
+        : Object.keys(fileinfo).length
+            ? Object.keys(fileinfo).map((label) => {
+                const file = fileinfo[label];
+
+                return <p>{file.name}, {file.size}, {file.type}</p>;
+              })
+            : []}
+      <hr />
+      {/* display all available downloads */}
+      <p>Download:</p>
+      {Object.keys(download).length
+        ? Object.keys(download).map((label) => {
+            const file = download[label];
+
+            return (
+              <p>
+                {file.name}, {file.size}, {file.type},
+                <a href={file.href} download={file.name}>
+                  Download
+                </a>
+              </p>
+            );
+          })
+        : []}
+      <hr />
+      {/* display all summaries */}
+      <p>Offsets:</p>
+      {Object.keys(summary).length
+        ? Object.keys(summary).map((label) => {
+            return (
+              <p>
+                {fileinfo[label].name}: offset is {summary[label]}
+              </p>
+            );
+          })
+        : []}
     </>
   );
 }
