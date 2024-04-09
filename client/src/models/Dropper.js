@@ -62,16 +62,9 @@ export class Dropper extends EventTarget {
       const fileStream = new FileStream(this._peer, files[i]);
 
       fileStream.addEventListener('offsetchanged', (event) => {
-        // dispatch offsetchanged event providing file label and the new offset
-        console.log('offsetchanged; ' + fileStream.label + ' ' + event.data);
-        this.dispatchEvent(
-          new MessageEvent('offsetchanged', {
-            data: {
-              label: fileStream.label,
-              offset: event.data
-            }
-          })
-        );
+        this.dispatchEvent(new MessageEvent('offsetchanged', {
+          data: { label: fileStream.label, offset: event.data }
+        }));
       });
 
       this.fileinfo[fileStream.label] = {
@@ -83,21 +76,18 @@ export class Dropper extends EventTarget {
       this._fileStreams.push(fileStream);
     }
 
-    // add event listeners
+    // on registered
     this._peer.addEventListener('registered', (event) => {
       this.dispatchEvent(new MessageEvent('registered', { data: event.data }));
     });
-    this._peer.addEventListener('connected', () => {
-      console.log('Dropper: Connected');
 
-      // dispatch connected event
+    // on peer connected
+    this._peer.addEventListener('connected', () => {
       this.dispatchEvent(new Event('connected'));
     });
-    // on WebRTC peer connected disconnected
-    this._peer.addEventListener('disconnected', () => {
-      console.log('Dropper: Disconnected');
 
-      // dispatch disconnected event
+    // on peer disconnected
+    this._peer.addEventListener('disconnected', () => {
       this.dispatchEvent(new Event('disconnected'));
     });
 

@@ -13,7 +13,8 @@ const _messageSize = parseInt(process.env.REACT_APP_MESSAGE_SIZE, 10);
  *
  * public methods:
  *
- * constructor(file) - Start a drop for a given file.
+ * constructor(peer, file) - Start a drop for a given file.
+ *   peer: the peer connection to facilitate the drop
  *   file: the file to drop
  *
  * dispatches events:
@@ -43,8 +44,6 @@ export class FileStream extends EventTarget {
 
     // generate a unique UUID for this file
     this.label = uuid.v4();
-
-    console.log(`FileStream: Creating data channel with label ${this.label}`);
 
     this._dataChannel = peer.createDataChannel(this.label);
     this._file = file;
@@ -87,6 +86,8 @@ export class FileStream extends EventTarget {
 
             // set state to done
             this._state = 'done';
+
+            return;
           }
 
           // incase an event follows the 'await' below, don't send

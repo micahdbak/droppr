@@ -4,7 +4,7 @@
 // FileStore.js
 
 // increase this when updating the db schema
-const _databaseVersion = 2;
+const _databaseVersion = 3;
 
 /* FileStore - Use IndexedDB to store and get files
  *
@@ -12,13 +12,10 @@ const _databaseVersion = 2;
  *
  * constructor() - Open the database.
  *
- * clearFile(name, size)
- * - clear all blobs for a file
- *
- * addBlob(label, offset, blob)
+ * add(label, offset, blob)
  * - add blob for a file
  *
- * getFile(label)
+ * flush(label)
  * - get a combined blob for a given label
  *
  * close()
@@ -26,8 +23,11 @@ const _databaseVersion = 2;
  *
  * dispatches events:
  *
- * 'error' -> MessageEvent (event.data has an error message)
- * - An error occurred.
+ * 'error' -> MessageEvent (event.data has the error)
+ * - The database encountered an error when opening.
+ *
+ * 'blocked' -> Event
+ * - The database was blocked from opening.
  *
  * 'open' -> Event
  * - The database is opened and ready.
@@ -46,8 +46,12 @@ export class FileStore extends EventTarget {
 
     openRequest.addEventListener('error', (event) => {
       this.dispatchEvent(
-        new MessageEvent('error', { data: event.target.errorCode })
+        new MessageEvent('error', { data: event.target.error })
       );
+    });
+
+    openRequest.addEventListener('blocked', (event) => {
+      this.dispatchEvent(new Event('blocked'));
     });
 
     openRequest.addEventListener('upgradeneeded', (event) => {
@@ -72,48 +76,8 @@ export class FileStore extends EventTarget {
 
   // public methods
 
-  // clear all blobs for a file
-  clearFile(name, size) {
-    // start a read-only transaction on the blobs object store
-    const transaction = this._database.transaction(['blobs'], 'readwrite');
-    const blobs = transaction.objectStore('blobs');
-
-    // get an offset range for each file in the object store for this file
-    const offsetRange = IDBKeyRange.bound([name, 0], [name, size]);
-
-    // start a cursor request given the offset range
-    const cursorRequest = blobs.openCursor(offsetRange);
-
-    // at each offset
-    cursorRequest.addEventListener('success', (event) => {
-      const cursor = event.target.result;
-
-      if (cursor) {
-        cursor.delete(); // delete the entry
-        cursor.continue(); // continue to the next
-      }
-    });
-
-    // this will pretend to be an IDBRequest object
-    const fakeRequest = new EventTarget();
-
-    fakeRequest.readyState = 'pending';
-
-    transaction.addEventListener('complete', () => {
-      fakeRequest.readyState = 'done';
-      fakeRequest.dispatchEvent(new Event('success'));
-    });
-
-    transaction.addEventListener('error', (event) => {
-      fakeRequest.error = event.target.error;
-      fakeRequest.dispatchEvent(new Event('error'));
-    });
-
-    return fakeRequest;
-  }
-
   // add blob data for a file
-  addBlob(label, offset, blob) {
+  add(label, offset, blob) {
     // return the IDBRequest for this transaction
     return this._database
       .transaction(['blobs'], 'readwrite')
@@ -122,9 +86,9 @@ export class FileStore extends EventTarget {
   }
 
   // get a combined blob for a given label
-  async getFile(label, size, type) {
+  async flush(label, size, type) {
     // start a read-only transaction on the blobs object store
-    const transaction = this._database.transaction(['blobs'], 'readonly');
+    const transaction = this._database.transaction(['blobs'], 'readwrite');
     const blobs = transaction.objectStore('blobs');
 
     let combinedBlob = null;
@@ -149,8 +113,8 @@ export class FileStore extends EventTarget {
           combinedBlob = new Blob([combinedBlob, blob], { type });
         }
 
-        // proceed to next item
-        cursor.continue();
+        cursor.delete(); // delete this item
+        cursor.continue(); // continue to the next item
       }
     });
 
