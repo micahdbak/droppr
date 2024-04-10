@@ -216,9 +216,11 @@ export class Dropper extends EventTarget {
     this._awaitFileStreams();
 
     this._interval = setInterval(() => {
-      this.dispatchEvent(new MessageEvent('offsetchanged',
-        { data: this._fileStreams.map((fileStream) => fileStream.offset) }
-      ));
+      this.dispatchEvent(
+        new MessageEvent('offsetchanged', {
+          data: this._fileStreams.map((fileStream) => fileStream.offset)
+        })
+      );
     }, 1000); // every second
   }
 

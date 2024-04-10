@@ -58,9 +58,9 @@ class FileStore extends EventTarget {
 
     openRequest.addEventListener('upgradeneeded', (event) => {
       // delete the blobs object store if it exists
-      if (event.target.result.objectStoreNames.contains("blobs")) {
+      if (event.target.result.objectStoreNames.contains('blobs')) {
         console.log('FileStore: Deleting blobs object store');
-        event.target.result.deleteObjectStore("blobs");
+        event.target.result.deleteObjectStore('blobs');
       }
 
       // object store for blobs with label and offset as keys
@@ -187,8 +187,7 @@ export class Recipient extends EventTarget {
 
     this._fileStore.addEventListener('error', (event) => {
       console.log(
-        'Recipient: Error in this._fileStore: ' +
-        event.data.toString()
+        'Recipient: Error in this._fileStore: ' + event.data.toString()
       );
     });
 
