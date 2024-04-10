@@ -4,7 +4,4 @@
 // index.js
 
 export * from './Dropper.js';
-export * from './FileStore.js';
-export * from './Peer.js';
 export * from './Recipient.js';
-export * from './SignalChannel.js';
