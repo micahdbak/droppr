@@ -23,5 +23,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The initial structure of droppr, as created during the Mountain Madness 2024 hackathon.
 
-[unreleased]: https://github.com/micahdbak/droppr.net/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/micahdbak/droppr.net/releases/tag/v0.1.0
+[unreleased]: https://github.com/micahdbak/droppr/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/micahdbak/droppr/releases/tag/v0.1.0
