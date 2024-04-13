@@ -5,7 +5,7 @@
 
 import * as uuid from 'uuid';
 
-import { Peer } from './index.js';
+import { Peer } from './Peer.js';
 
 const _messageSize = parseInt(process.env.REACT_APP_MESSAGE_SIZE, 10);
 const _summaryInterval = 1000; // 1 second
@@ -156,7 +156,7 @@ class FileStream extends EventTarget {
  *
  * dispatches events:
  *
- * 'registered' -> MessageEvent (event.data has the drop identifier.)
+ * 'idchanged' -> Event (event.target.id has the drop identifier.)
  * - The drop was registered, and a drop identifier was given.
  *
  * 'connected' -> Event
@@ -208,7 +208,7 @@ export class Dropper extends EventTarget {
     // on registered
     this._peer.addEventListener('registered', (event) => {
       this.id = event.data;
-      this.dispatchEvent(new MessageEvent('registered', { data: this.id }));
+      this.dispatchEvent(new Event('idchanged'));
     });
 
     // on peer connected

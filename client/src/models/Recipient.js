@@ -3,7 +3,7 @@
 // models/
 // Recipient.js
 
-import { Peer } from './index.js';
+import { Peer } from './Peer.js';
 
 // increase this when updating the db schema
 const _databaseVersion = 3;
@@ -61,9 +61,9 @@ class FileStore extends EventTarget {
 
     openRequest.addEventListener('upgradeneeded', (event) => {
       // delete the blobs object store if it exists
-      if (event.target.result.objectStoreNames.contains("blobs")) {
+      if (event.target.result.objectStoreNames.contains('blobs')) {
         console.log('FileStore: Deleting blobs object store');
-        event.target.result.deleteObjectStore("blobs");
+        event.target.result.deleteObjectStore('blobs');
       }
 
       // object store for blobs with label and offset as keys
@@ -199,8 +199,7 @@ export class Recipient extends EventTarget {
 
     this._fileStore.addEventListener('error', (event) => {
       console.log(
-        'Recipient: Error in this._fileStore: ' +
-        event.target.error.toString()
+        'Recipient: Error in this._fileStore: ' + event.target.error.toString()
       );
     });
 
@@ -276,7 +275,6 @@ export class Recipient extends EventTarget {
       case 'done':
         // close the data channel, since we got the done message
         event.target.close();
-        event.target.removeEventListener('message');
 
         console.log(`Recipient: Got done message for data channel ${label}`);
 
@@ -333,8 +331,10 @@ export class Recipient extends EventTarget {
         const href = URL.createObjectURL(file);
 
         this._download[label] = { ...this._fileinfo[label], href };
-        delete this._fileinfo[label]; // remove the fileinfo for this channel
         this.dispatchEvent(new Event('downloadchanged'));
+
+        delete this._fileinfo[label]; // remove the fileinfo for this channel
+        this.dispatchEvent(new Event('fileinfochanged'));
 
         // all references for this channel should be deleted
         // (wahoo; garbage collected???)
@@ -406,12 +406,16 @@ export class Recipient extends EventTarget {
   get totalSize() {
     let totalSize = 0;
 
-    for (let i = 0; i < this._fileinfo.length; i++) {
-      totalSize += this._fileinfo[i].size;
+    const fileinfo = Object.values(this._fileinfo);
+
+    for (let i = 0; i < fileinfo.length; i++) {
+      totalSize += fileinfo[i].size;
     }
 
-    for (let i = 0; i < this._download.length; i++) {
-      totalSize += this._download[i].size;
+    const download = Object.values(this._download);
+
+    for (let i = 0; i < download.length; i++) {
+      totalSize += download[i].size;
     }
 
     return totalSize;
@@ -420,12 +424,16 @@ export class Recipient extends EventTarget {
   get bytesReceived() {
     let bytesReceived = 0;
 
-    for (let i = 0; i < this._offset.length; i++) {
-      bytesReceived += this._offset[i];
+    const offset = Object.values(this._offset);
+
+    for (let i = 0; i < offset.length; i++) {
+      bytesReceived += offset[i];
     }
 
-    for (let i = 0; i < this._download.length; i++) {
-      bytesReceived += this._download[i].size;
+    const download = Object.values(this._download);
+
+    for (let i = 0; i < download.length; i++) {
+      bytesReceived += download[i].size;
     }
 
     return bytesReceived;

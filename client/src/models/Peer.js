@@ -8,12 +8,11 @@ const _webSocketScheme = process.env.REACT_APP_SC_WS_SCHEME;
 //const _restScheme = process.env.REACT_APP_SC_REST_SCHEME;
 const _host = process.env.REACT_APP_SC_HOST;
 const _pingRate = process.env.REACT_APP_SC_PING_RATE;
+const _turnUsername = process.env.REACT_APP_TURN_USERNAME;
+const _turnCredential = process.env.REACT_APP_TURN_CREDENTIAL;
 
 const _webSocketRoot = _webSocketScheme + '://' + _host;
 //const _restRoot = _restScheme + '://' + _host;
-
-const _turnUsername = process.env.REACT_APP_TURN_USERNAME;
-const _turnCredential = process.env.REACT_APP_TURN_CREDENTIAL;
 
 // STUN and TURN server configuration for RTCPeerConnection
 const _configuration = {
@@ -120,8 +119,6 @@ class SignalChannel extends EventTarget {
       }
     }
 
-    this._persist = true;
-
     // add event listeners for open, close, and message events
     this._webSocket.addEventListener('open', this._onWebSocketOpen.bind(this));
     this._webSocket.addEventListener(
@@ -155,6 +152,9 @@ class SignalChannel extends EventTarget {
     if (this._pingInterval === null) {
       this._pingInterval = setInterval(this._ping.bind(this), _pingRate);
     }
+
+    // can connect; should persist
+    this._persist = true;
   }
 
   _onWebSocketClose() {
