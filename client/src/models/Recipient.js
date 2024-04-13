@@ -118,7 +118,13 @@ class FileStore extends EventTarget {
           combinedBlob = new Blob([combinedBlob, blob], { type });
         }
 
-        cursor.delete(); // delete this item
+        // NOTE: could do this to delete the item, but this may force
+        // each blob into memory (as its being removed from disk).
+        // PERKS: can keep a local history of files and re-download them.
+        // FUTURE FEATURE: interactive history of files page, with downloads
+        // REQUIRES: file information be stored in the indexedDB as well as
+        // blobs.
+        //cursor.delete();
         cursor.continue(); // continue to the next item
       }
     });
