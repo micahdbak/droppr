@@ -117,7 +117,7 @@ export function Dropper() {
           'flex flex-col items-center justify-center ' +
           (isDragging
             ? 'bg-blue-100 border-2 border-blue-500 '
-            : 'bg-slate-100 border border-black ') +
+            : 'bg-slate-100 border-2 border-slate-400 ') +
           'border-dashed rounded-xl text-center'
         }
         onDrop={handleDrop}
@@ -151,7 +151,10 @@ export function Dropper() {
         'text-center'
       }
     >
-      {files.map((file) => <p>{file.name}, {file.size}, {file.type}</p>)}
+      <p>Files:</p>
+      {files.map((file) => (
+        <p><b>{file.name}</b>, {+(file.size / 1024).toFixed(1)} kB</p>
+      ))}
       <br />
       {id !== '' && bytesSent === 0 ? (
         <div className="flex flex-row items-center justify-center space-x-2 w-full">
@@ -169,7 +172,10 @@ export function Dropper() {
       ) : (
         <>
           <p>{status}</p>
-          <p>{bytesSent} / {totalSize} ({percentage}%) - {speed} kBps</p>
+          {+(bytesSent / 1024).toFixed(1)} kB&nbsp;
+          of {+(totalSize / 1024).toFixed(1)} kB&nbsp;
+          ({+(percentage).toFixed(1)}%)&nbsp;
+          {+speed.toFixed(1)} kBps
         </>
       )}
     </div>

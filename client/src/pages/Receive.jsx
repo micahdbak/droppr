@@ -16,6 +16,7 @@ export function Receive(props) {
   const [lastBytesReceived, setLastBytesReceived] = useState(0);
   const [percentage, setPercentage] = useState(0);
   const [recipient, setRecipient] = useState(null);
+  const [shouldReceive, setShouldReceive] = useState(false);
   const [speed, setSpeed] = useState(0);
   const [status, setStatus] = useState('waiting');
   const [totalSize, setTotalSize] = useState(0);
@@ -23,7 +24,7 @@ export function Receive(props) {
   useEffect(() => {
     let _recipient = recipient;
 
-    if (_recipient === null) {
+    if (_recipient === null && shouldReceive) {
       _recipient = new models.Recipient(id);
 
       _recipient.addEventListener('connected', () => {
@@ -45,19 +46,21 @@ export function Receive(props) {
       setRecipient(_recipient);
     }
 
-    const interval = setInterval(
-      (r) => {
-        setBytesReceived(r.bytesReceived);
-        setTotalSize(r.totalSize);
-      },
-      _intervalRate,
-      _recipient
-    );
+    if (_recipient !== null) {
+      const interval = setInterval(
+        (r) => {
+          setBytesReceived(r.bytesReceived);
+          setTotalSize(r.totalSize);
+        },
+        _intervalRate,
+        _recipient
+      );
 
-    return () => {
-      clearInterval(interval);
-    };
-  }, [recipient]);
+      return () => {
+        clearInterval(interval);
+      };
+    }
+  }, [shouldReceive, recipient]);
 
   useEffect(() => {
     if (totalSize > 0 && bytesReceived - lastBytesReceived > 0) {
@@ -66,6 +69,29 @@ export function Receive(props) {
       setLastBytesReceived(bytesReceived);
     }
   }, [bytesReceived, lastBytesReceived, totalSize]);
+
+  if (!shouldReceive) {
+    return (
+      <div className="fixed top-8 right-8 bottom-8 left-8">
+        <div
+          className={
+            'w-full h-full ' +
+            'flex flex-col items-center justify-center ' +
+            'text-center'
+          }
+        >
+          <p className='mb-2'>Drop identifier:<br /><b>{id}</b></p>
+          <p className='mb-2'>Look right?</p>
+          <button
+            className="bg-blue-400 text-white px-4 py-2 rounded-lg"
+            onClick={() => setShouldReceive(true)}
+          >
+            Receive Files
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed top-8 right-8 bottom-8 left-8">
@@ -76,18 +102,34 @@ export function Receive(props) {
           'text-center'
         }
       >
-        <p>Pending Files:</p>
-        {fileinfo.map((file) => <p>{file.name}, {file.size}, {file.type}</p>)}
-        <p>Downloads:</p>
-        {download.map((file) => (
-          <p>
-            {file.name}, {file.size}, {file.type}&nbsp;
-            <a className='text-blue-400' href={file.href} download={file.name}>Download</a>
-          </p>
-        ))}
-        <br />
+        {fileinfo.length > 0 ? (
+          <>
+            <p>Pending Files:</p>
+            {fileinfo.map((file) => (
+              <p><b>{file.name}</b>, {+(file.size / 1024).toFixed(1)} kB</p>
+            ))}
+            <br />
+          </>
+        ) : []}
+        {download.length > 0 ? (
+          <>
+            <p>Downloads:</p>
+            {download.map((file) => (
+              <p>
+                <b>{file.name}</b>, {+(file.size / 1024).toFixed(1)} kB&nbsp;
+                <a className='text-blue-400' href={file.href} download={file.name}>Download</a>
+              </p>
+            ))}
+            <br />
+          </>
+        ) : []}
         <p>{status}</p>
-        <p>{bytesReceived} / {totalSize} ({percentage}%) - {speed} kBps</p>
+        <p>
+          {+(bytesReceived / 1024).toFixed(1)} kB&nbsp;
+          of {+(totalSize / 1024).toFixed(1)} kB&nbsp;
+          ({+(percentage).toFixed(1)}%)&nbsp;
+          {+speed.toFixed(1)} kBps
+        </p>
       </div>
     </div>
   );
