@@ -5,9 +5,10 @@
 
 import * as uuid from 'uuid';
 
-import { Peer } from './index.js';
+import { Peer } from './Peer.js';
 
 const _messageSize = parseInt(process.env.REACT_APP_MESSAGE_SIZE, 10);
+const _summaryInterval = 1000; // 1 second
 
 /* FileStream - Send a file through a data channel.
  *
@@ -18,6 +19,8 @@ const _messageSize = parseInt(process.env.REACT_APP_MESSAGE_SIZE, 10);
  *   file: the file to drop
  *
  * public fields:
+ *
+ * file - The file being sent
  *
  * label - The data channel label
  *
@@ -32,11 +35,11 @@ class FileStream extends EventTarget {
   // private fields
 
   _dataChannel = null; // the data channel
-  _file = null; // the file to be sent
   _state = 'fileinfo'; // the current state
 
   // public fields
 
+  file; // the file to be sent
   label; // the data channel label
   offset = 0; // the current position in the file
 
@@ -49,7 +52,7 @@ class FileStream extends EventTarget {
     this.label = uuid.v4();
 
     this._dataChannel = peer.createDataChannel(this.label);
-    this._file = file;
+    this.file = file;
 
     // event listeners for data channel
     this._dataChannel.addEventListener('open', this._sendMessage.bind(this));
@@ -69,9 +72,9 @@ class FileStream extends EventTarget {
           const packet = {
             type: 'fileinfo',
             fileinfo: {
-              name: this._file.name,
-              size: this._file.size,
-              type: this._file.type
+              name: this.file.name,
+              size: this.file.size,
+              type: this.file.type
             }
           };
 
@@ -83,7 +86,7 @@ class FileStream extends EventTarget {
         // ready to send next chunk
         case 'send':
           // check if done sending file
-          if (this.offset >= this._file.size) {
+          if (this.offset >= this.file.size) {
             this._dataChannel.send('{"type":"done"}'); // send done message
             // let recipient close the connection
 
@@ -98,8 +101,8 @@ class FileStream extends EventTarget {
           this._state = 'sending';
 
           // slice the file given the current position
-          let end = Math.min(this.offset + _messageSize, this._file.size);
-          let blob = this._file.slice(this.offset, end);
+          let end = Math.min(this.offset + _messageSize, this.file.size);
+          let blob = this.file.slice(this.offset, end);
 
           // update the current position
           this.offset = end;
@@ -143,11 +146,17 @@ class FileStream extends EventTarget {
  *
  * public fields:
  *
- * fileinfo
+ * id - The drop identifier
+ *
+ * fileinfo - Information about files being sent
+ *
+ * totalSize - Sum of file sizes
+ *
+ * bytesSent - Total number of bytes sent
  *
  * dispatches events:
  *
- * 'registered' -> MessageEvent (event.data has the drop identifier.)
+ * 'idchanged' -> Event (event.target.id has the drop identifier.)
  * - The drop was registered, and a drop identifier was given.
  *
  * 'connected' -> Event
@@ -156,9 +165,6 @@ class FileStream extends EventTarget {
  * 'disconnected' -> Event
  * - The recipient has disconnected, intentionally or unintentionally.
  *   If unintentional, reconnection will be attempted immediately.
- *
- * 'offsetchanged' -> MessageEvent (event.data has attributes label, offset.)
- * - Offset changed; an update on the number of bytes sent for a given file.
  *
  * 'failed' -> Event
  * - An unexpected error has prevented the files from being dropped.
@@ -169,12 +175,14 @@ class FileStream extends EventTarget {
 export class Dropper extends EventTarget {
   // private fields
 
-  _peer = null; // the peer connection
+  _peer; // the peer connection
   _fileStreams = []; // open file streams
 
   // public fields
 
-  fileinfo = {}; // information about the files being dropped
+  id; // drop identifier
+  fileinfo = []; // information about the files being dropped
+  totalSize = 0; // total size of files
 
   // constructor
 
@@ -187,19 +195,20 @@ export class Dropper extends EventTarget {
     // start file streams (data channels) for each file
     for (let i = 0; i < files.length; i++) {
       const fileStream = new FileStream(this._peer, files[i]);
+      this._fileStreams.push(fileStream);
 
-      this.fileinfo[fileStream.label] = {
+      this.fileinfo.push({
         name: files[i].name,
         size: files[i].size,
         type: files[i].type
-      };
-
-      this._fileStreams.push(fileStream);
+      });
+      this.totalSize += files[i].size;
     }
 
     // on registered
     this._peer.addEventListener('registered', (event) => {
-      this.dispatchEvent(new MessageEvent('registered', { data: event.data }));
+      this.id = event.data;
+      this.dispatchEvent(new Event('idchanged'));
     });
 
     // on peer connected
@@ -212,14 +221,8 @@ export class Dropper extends EventTarget {
       this.dispatchEvent(new Event('disconnected'));
     });
 
-    // watch file streams, and, when finished
+    // watch file streams
     this._awaitFileStreams();
-
-    this._interval = setInterval(() => {
-      this.dispatchEvent(new MessageEvent('offsetchanged',
-        { data: this._fileStreams.map((fileStream) => fileStream.offset) }
-      ));
-    }, 1000); // every second
   }
 
   // private methods
@@ -241,5 +244,17 @@ export class Dropper extends EventTarget {
       console.log(`Dropper: Error in _awaitFileStreams: ${err.toString()}`);
       this.dispatchEvent(new Event('failed'));
     }
+  }
+
+  // public methods
+
+  get bytesSent() {
+    let bytesSent = 0;
+
+    for (let i = 0; i < this._fileStreams.length; i++) {
+      bytesSent += this._fileStreams[i].offset;
+    }
+
+    return bytesSent;
   }
 }

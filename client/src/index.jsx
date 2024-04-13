@@ -5,7 +5,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './tailwind.css';
 
-import { Main } from './main.jsx';
+import { Main } from './Main.jsx';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

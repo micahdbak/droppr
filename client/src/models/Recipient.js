@@ -3,7 +3,7 @@
 // models/
 // Recipient.js
 
-import { Peer } from './index.js';
+import { Peer } from './Peer.js';
 
 // increase this when updating the db schema
 const _databaseVersion = 3;
@@ -25,7 +25,7 @@ const _databaseVersion = 3;
  *
  * dispatches events:
  *
- * 'error' -> MessageEvent (event.data has the error)
+ * 'error' -> Event (event.target.error has the error)
  * - The database encountered an error when opening.
  *
  * 'blocked' -> Event
@@ -37,7 +37,11 @@ const _databaseVersion = 3;
 class FileStore extends EventTarget {
   // private fields
 
-  _database = null; // the database
+  _database; // the database
+
+  // public fields
+
+  error;
 
   // constructor
 
@@ -47,9 +51,8 @@ class FileStore extends EventTarget {
     const openRequest = window.indexedDB.open('fileStore', _databaseVersion);
 
     openRequest.addEventListener('error', (event) => {
-      this.dispatchEvent(
-        new MessageEvent('error', { data: event.target.error })
-      );
+      this.error = event.target.error;
+      this.dispatchEvent(new Event('error'));
     });
 
     openRequest.addEventListener('blocked', (event) => {
@@ -58,9 +61,9 @@ class FileStore extends EventTarget {
 
     openRequest.addEventListener('upgradeneeded', (event) => {
       // delete the blobs object store if it exists
-      if (event.target.result.objectStoreNames.contains("blobs")) {
+      if (event.target.result.objectStoreNames.contains('blobs')) {
         console.log('FileStore: Deleting blobs object store');
-        event.target.result.deleteObjectStore("blobs");
+        event.target.result.deleteObjectStore('blobs');
       }
 
       // object store for blobs with label and offset as keys
@@ -144,6 +147,16 @@ class FileStore extends EventTarget {
  * constructor(id) - Receive a file given a drop identifier.
  *   id: the drop identifier
  *
+ * public fields:
+ *
+ * fileinfo - File information
+ *
+ * download - Download information
+ *
+ * totalSize - Total size of files being received
+ *
+ * bytesReceived - Number of bytes received
+ *
  * dispatches events:
  *
  * 'connected' -> Event
@@ -153,27 +166,26 @@ class FileStore extends EventTarget {
  * - The dropper has disconnected, intentionally or unintentionally.
  *   If unintentional, reconnection will be attempted immediately.
  *
- * 'fileinfo' -> MessageEvent (event.data: { label, name, size, type }.)
- * - File information about a file that is being downloaded.
- *   The label attribute is unique for each file being downloaded.
+ * 'fileinfochanged' -> Event
+ * - File information about a file that is being downloaded has changed. Access
+ *   event.target.fileinfo for the changed fileinfo.
  *
- * 'offsetchanged' -> MessageEvent (event.data: { label, offset }.)
- * - An update on the number of bytes got (offset).
- *
- * 'download' -> MessageEvent (event.data: { label, name, size, type, href }.)
- * - A file was downloaded successfully.
+ * 'downloadchanged' -> Event
+ * - A file was downloaded successfully. Access event.target.download for the
+ *   changed download information.
  */
 export class Recipient extends EventTarget {
   // private fields
 
-  _peer = null; // the peer connection
-  _fileStore = null; // the file store
+  _peer; // the peer connection
+  _fileStore; // the file store
 
   // these all map a given data channel label to...
-  _fileinfo = {}; // ...file information (name, size, type)
+  _fileinfo = {}; // ...file information
   _blob = {}; // ...pending blob
   _offset = {}; // ...current offset
   _request = {}; // ...current database request
+  _download = {}; // ...download information
 
   // constructor
 
@@ -187,8 +199,7 @@ export class Recipient extends EventTarget {
 
     this._fileStore.addEventListener('error', (event) => {
       console.log(
-        'Recipient: Error in this._fileStore: ' +
-        event.data.toString()
+        'Recipient: Error in this._fileStore: ' + event.target.error.toString()
       );
     });
 
@@ -196,10 +207,10 @@ export class Recipient extends EventTarget {
       console.log('Recipient: Blocked from opening database.');
     });
 
-    this._fileStore.addEventListener('open', this._begin.bind(this));
+    this._fileStore.addEventListener('open', this._openPeer.bind(this));
   }
 
-  _begin() {
+  _openPeer() {
     // open a peer connection with the dropper
     this._peer = new Peer(this.id);
 
@@ -251,15 +262,10 @@ export class Recipient extends EventTarget {
 
     switch (message.type) {
       case 'fileinfo':
-        // let caller know about the file being received
-        this.dispatchEvent(
-          new MessageEvent('fileinfo', {
-            data: { label, ...message.fileinfo }
-          })
-        );
+        this._fileinfo[label] = message.fileinfo;
+        this.dispatchEvent(new Event('fileinfochanged'));
 
         // initialize these things
-        this._fileinfo[label] = message.fileinfo;
         this._blob[label] = null;
         this._offset[label] = 0;
         this._request[label] = { readyState: 'done' };
@@ -287,7 +293,7 @@ export class Recipient extends EventTarget {
           }
         }
 
-        this._request[label] = undefined;
+        delete this._request[label];
 
         // check if there is a blob waiting to be added to the file store
         if (this._blob[label] !== null) {
@@ -296,13 +302,6 @@ export class Recipient extends EventTarget {
             label,
             this._offset[label],
             this._blob[label]
-          );
-
-          // dispatch offset changed event
-          this.dispatchEvent(
-            new MessageEvent('offsetchanged', {
-              data: { label, offset: this._fileinfo[label].size }
-            })
           );
 
           try {
@@ -318,10 +317,8 @@ export class Recipient extends EventTarget {
           }
         }
 
-        this._blob[label] = undefined;
-        this._offset[label] = undefined;
-
-        // start download; will dispatch 'download' event when finished
+        delete this._blob[label];
+        delete this._offset[label];
 
         // flush the file from the object store
         let file = await this._fileStore.flush(
@@ -332,19 +329,15 @@ export class Recipient extends EventTarget {
 
         // create download link for file
         const href = URL.createObjectURL(file);
-        file = null; // garbage
 
-        // dispatch event with download information
-        this.dispatchEvent(
-          new MessageEvent('download', {
-            // has attributes label, name, size, type, href
-            data: { label, ...this._fileinfo[label], href }
-          })
-        );
+        this._download[label] = { ...this._fileinfo[label], href };
+        this.dispatchEvent(new Event('downloadchanged'));
 
-        this._fileinfo[label] = undefined;
+        delete this._fileinfo[label]; // remove the fileinfo for this channel
+        this.dispatchEvent(new Event('fileinfochanged'));
 
-        // channel is closed, and all references for this label are undefined
+        // all references for this channel should be deleted
+        // (wahoo; garbage collected???)
 
         break;
 
@@ -370,9 +363,9 @@ export class Recipient extends EventTarget {
       });
     }
 
-    // check for last request
     let request = this._request[label];
 
+    // check if previous DB request is done
     if (request.readyState === 'done') {
       // start a new database request adding this blob to the file store
       request = this._fileStore.add(
@@ -386,6 +379,9 @@ export class Recipient extends EventTarget {
           'Recipient: Error in _receiveArrayBuffer: ' +
             event.target.error.toString()
         );
+
+        // TODO: close the channel maybe? retry?
+        // consider recovery methods in the event of a DB failure
       });
 
       // update the current request for this label to be this one
@@ -394,13 +390,52 @@ export class Recipient extends EventTarget {
       // update the offset for this file
       this._offset[label] += this._blob[label].size;
       this._blob[label] = null; // clear the blob
-
-      // dispatch offset changed event
-      this.dispatchEvent(
-        new MessageEvent('offsetchanged', {
-          data: { label, offset: this._offset[label] }
-        })
-      );
     }
+  }
+
+  // public methods
+
+  get fileinfo() {
+    return Object.values(this._fileinfo);
+  }
+
+  get download() {
+    return Object.values(this._download);
+  }
+
+  get totalSize() {
+    let totalSize = 0;
+
+    const fileinfo = Object.values(this._fileinfo);
+
+    for (let i = 0; i < fileinfo.length; i++) {
+      totalSize += fileinfo[i].size;
+    }
+
+    const download = Object.values(this._download);
+
+    for (let i = 0; i < download.length; i++) {
+      totalSize += download[i].size;
+    }
+
+    return totalSize;
+  }
+
+  get bytesReceived() {
+    let bytesReceived = 0;
+
+    const offset = Object.values(this._offset);
+
+    for (let i = 0; i < offset.length; i++) {
+      bytesReceived += offset[i];
+    }
+
+    const download = Object.values(this._download);
+
+    for (let i = 0; i < download.length; i++) {
+      bytesReceived += download[i].size;
+    }
+
+    return bytesReceived;
   }
 }
