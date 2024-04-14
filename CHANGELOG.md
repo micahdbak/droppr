@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FileStream model for client.
 - Multiple file dropping and receiving for client.
 - Reworked user interface using new models for client.
+- FileContainer and FileItem components for client.
+- Drop and Receive pages for client.
 
 ### Changed
 
