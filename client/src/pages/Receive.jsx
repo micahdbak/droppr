@@ -5,6 +5,8 @@ import React from 'react';
 
 import { Recipient } from '../components/index.js';
 
+const _version = process.env.REACT_APP_VERSION;
+
 export function Receive(props) {
   const { id } = props;
 
@@ -12,7 +14,7 @@ export function Receive(props) {
     <>
       <div className="fixed flex flex-row items-center justify-between top-5 right-8 left-8 h-6 gap-2">
         <p className="text-lg text-slate-600">receivr.</p>
-        <p className="text-xs font-mono text-slate-800 rounded px-2 py-1 bg-blue-100">v0.2.0</p>
+        <p className="text-xs font-mono text-slate-800 rounded px-2 py-1 bg-blue-100">{_version}</p>
       </div>
       <div className="fixed top-16 right-8 bottom-16 left-8">
         <Recipient id={id} />
