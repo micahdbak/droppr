@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Droppr. All Rights Reserved.
+// Copyright (C) 2024 droppr. All Rights Reserved.
 //
 
 import React from 'react';

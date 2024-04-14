@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faCheck } from '@fortawesome/free-solid-svg-icons';
 
+import { FileContainer, FileItem } from './index.js';
 import * as models from '../models/index.js';
 
 const _intervalRate = 1000; // 1s
@@ -151,10 +152,12 @@ export function Dropper() {
         'text-center'
       }
     >
-      <p>Files:</p>
-      {files.map((file) => (
-        <p><b>{file.name}</b>, {+(file.size / 1024).toFixed(1)} kB</p>
-      ))}
+      <p className="font-bold text-lg text-slate-600 mb-4">Your Files</p>
+      <FileContainer>
+        {files.map((file) => (
+          <FileItem name={file.name} size={file.size} />
+        ))}
+      </FileContainer>
       <br />
       {id !== '' && bytesSent === 0 ? (
         <div className="flex flex-row items-center justify-center space-x-2 w-full">
