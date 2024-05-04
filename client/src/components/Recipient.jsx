@@ -3,13 +3,13 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { FileContainer, FileItem } from './index.js';
+import { FileTable, FileRow } from './index.js';
 import * as models from '../models/index.js';
 
 const _intervalRate = 1000; // 1s
 
 export function Recipient(props) {
-  const { id } = props;
+  const { className, id } = props;
 
   const [bytesReceived, setBytesReceived] = useState(0);
   const [download, setDownload] = useState([]);
@@ -71,19 +71,21 @@ export function Recipient(props) {
     }
   }, [bytesReceived, lastBytesReceived, totalSize]);
 
-  const files = [...fileinfo, ...download];
+  const files = [...download, ...fileinfo];
 
   if (!shouldReceive) {
     return (
       <div
         className={
-          'w-full h-full ' +
           'flex flex-col items-center justify-center ' +
-          'text-center'
+          'text-center ' +
+          className
         }
       >
         <p className="text-base text-slate-800 mb-2">Drop identifier is</p>
-        <p className="text-sm font-mono rounded px-2 py-1 mb-8 bg-blue-100">{id}</p>
+        <p className="text-sm font-mono rounded px-2 py-1 mb-8 bg-blue-100">
+          {id}
+        </p>
         <p className="text-base text-slate-600 mb-2">Look right?</p>
         <button
           className="bg-blue-400 text-white px-4 py-2 rounded-lg"
@@ -96,30 +98,22 @@ export function Recipient(props) {
   }
 
   return (
-    <div
-      className={
-        'w-full h-full ' +
-        'flex flex-col items-center justify-center ' +
-        'text-center'
-      }
-    >
-      <p className="font-bold text-lg text-slate-600 mb-4">Your Files</p>
-      <FileContainer>
-        {files.map((file) => (
-          <FileItem
-            name={file.name}
-            size={file.size}
-            href={file.href}
-            disabled={file.href === undefined}
+    <div className={'bg-slate-100 rounded-xl ' + className}>
+      <FileTable>
+        {files.map(({ name, size, href }) => (
+          <FileRow
+            name={name}
+            size={size}
+            href={href}
+            disabled={href === undefined}
           />
         ))}
-      </FileContainer>
-      <br />
-      <p>{status}</p>
-      <p>
-        {+(bytesReceived / 1024).toFixed(1)} kB&nbsp;
-        of {+(totalSize / 1024).toFixed(1)} kB&nbsp;
-        ({+(percentage).toFixed(1)}%)&nbsp;
+      </FileTable>
+      <p className="absolute right-4 bottom-4 left-4 h-6 leading-6 text-center">
+        ({status})&nbsp;
+        {+(bytesReceived / 1024).toFixed(1)} kB&nbsp; of{' '}
+        {+(totalSize / 1024).toFixed(1)} kB&nbsp; ({+percentage.toFixed(1)}
+        %)&nbsp;
         {+speed.toFixed(1)} kBps
       </p>
     </div>

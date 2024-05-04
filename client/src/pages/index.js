@@ -2,5 +2,3 @@
 //
 
 export * from './About.jsx';
-export * from './Drop.jsx';
-export * from './Receive.jsx';
