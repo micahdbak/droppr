@@ -3,7 +3,10 @@
 
 import React, { useState, useEffect } from 'react';
 
-import { About, Drop, Receive } from './pages/index.js';
+import { About } from './pages/index.js';
+import { Dropper, Footer, Recipient } from './components/index.js';
+
+const _version = process.env.REACT_APP_VERSION;
 
 export function Main() {
   const [view, setView] = useState('drop');
@@ -21,20 +24,33 @@ export function Main() {
     }
   }, []);
 
-  switch (view) {
-    case 'receive':
-      return <Receive id={id} />;
+  if (view === 'receive') {
+    return (
+      <>
+        <div className="fixed flex flex-row items-center justify-between top-5 right-8 left-8 h-6 gap-2">
+          <p className="text-lg text-slate-600">receivr.</p>
+          <p className="text-xs font-mono text-slate-800 rounded px-2 py-1 bg-blue-100">
+            {_version}
+          </p>
+        </div>
+        <Recipient className="fixed top-16 right-8 bottom-16 left-8" id={id} />
+        <Footer className="fixed right-8 bottom-5 left-8" />
+      </>
+    );
+  } else if (view === 'about') {
+    return <About />;
+  }
 
-      break;
-
-    case 'about':
-      return <About />;
-
-      break;
-
-    default:
-      return <Drop />;
-
-      break;
-  };
+  return (
+    <>
+      <div className="fixed flex flex-row items-center justify-between top-5 right-8 left-8 h-6 gap-2">
+        <p className="text-lg text-slate-600">droppr.</p>
+        <p className="text-xs font-mono text-slate-800 rounded px-2 py-1 bg-blue-100">
+          {_version}
+        </p>
+      </div>
+      <Dropper className="fixed top-16 right-8 bottom-16 left-8" />
+      <Footer className="fixed right-8 bottom-5 left-8" />
+    </>
+  );
 }

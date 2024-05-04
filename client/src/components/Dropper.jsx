@@ -5,12 +5,14 @@ import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faCheck } from '@fortawesome/free-solid-svg-icons';
 
-import { FileContainer, FileItem } from './index.js';
+import { FileTable, FileRow } from './index.js';
 import * as models from '../models/index.js';
 
 const _intervalRate = 1000; // 1s
 
-export function Dropper() {
+export function Dropper(props) {
+  const { className } = props;
+
   const [bytesSent, setBytesSent] = useState(0);
   const [dropper, setDropper] = useState(null);
   const [files, setFiles] = useState([]);
@@ -114,12 +116,12 @@ export function Dropper() {
     return (
       <div
         className={
-          'w-full h-full ' +
           'flex flex-col items-center justify-center ' +
           (isDragging
             ? 'bg-blue-100 border-2 border-blue-500 '
             : 'bg-slate-100 border-2 border-slate-400 ') +
-          'border-dashed rounded-xl text-center'
+          'border-dashed rounded-xl text-center ' +
+          className
         }
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -145,22 +147,20 @@ export function Dropper() {
   }
 
   return (
-    <div
-      className={
-        'w-full h-full ' +
-        'flex flex-col items-center justify-center ' +
-        'text-center'
-      }
-    >
-      <p className="font-bold text-lg text-slate-600 mb-4">Your Files</p>
-      <FileContainer>
+    <div className={'bg-slate-100 rounded-xl ' + className}>
+      <FileTable>
         {files.map((file) => (
-          <FileItem name={file.name} size={file.size} />
+          <FileRow name={file.name} size={file.size} />
         ))}
-      </FileContainer>
-      <br />
+      </FileTable>
       {id !== '' && bytesSent === 0 ? (
-        <div className="flex flex-row items-center justify-center space-x-2 w-full">
+        <div
+          className={
+            'absolute right-4 bottom-4 left-4 h-6 ' +
+            'flex flex-row items-center justify-center gap-2'
+          }
+        >
+          <p className="text-sm text-slate-700">Share:</p>
           <input
             type="text"
             className="px-2 py-1 border border-slate-400 rounded font-mono text-sm bg-slate-100"
@@ -173,13 +173,13 @@ export function Dropper() {
           </button>
         </div>
       ) : (
-        <>
-          <p>{status}</p>
-          {+(bytesSent / 1024).toFixed(1)} kB&nbsp;
-          of {+(totalSize / 1024).toFixed(1)} kB&nbsp;
-          ({+(percentage).toFixed(1)}%)&nbsp;
+        <p className="absolute right-4 bottom-4 left-4 h-6 leading-6 text-center">
+          ({status})&nbsp;
+          {+(bytesSent / 1024).toFixed(1)} kB&nbsp; of{' '}
+          {+(totalSize / 1024).toFixed(1)} kB&nbsp; ({+percentage.toFixed(1)}
+          %)&nbsp;
           {+speed.toFixed(1)} kBps
-        </>
+        </p>
       )}
     </div>
   );
