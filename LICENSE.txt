@@ -1,0 +1,8 @@
+droppr - Peer to peer file transfer service.
+
+Copyright (C) 2024 Micah Baker, Nakul Bansal, Johnny Deng, Simon Purdon. All
+rights reserved.
+
+The authors of droppr hereby disclaims all copyright interest in the peer to
+peer file transfer service "droppr", the authors being Micah Baker, Nakul
+Bansal, Johnny Deng, and Simon Purdon.

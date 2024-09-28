@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+
 	"github.com/google/uuid"
 	ws "github.com/gorilla/websocket"
 )
@@ -17,7 +18,7 @@ type Agent struct {
 }
 
 var upgrader = ws.Upgrader{
-	ReadBufferSize: 0,
+	ReadBufferSize:  0,
 	WriteBufferSize: 0,
 	CheckOrigin: func(r *http.Request) bool {
 		// accept all origins
@@ -136,9 +137,8 @@ func (a *Agent) ServeDropper(w http.ResponseWriter, r *http.Request) {
 		d.Dropper = sock
 
 		d.mux.Unlock()
-
-	// no drop identifier was provided; register a new drop
 	} else {
+		// no drop identifier was provided; register a new drop
 		d = a.register()
 		d.setDropper(sock)
 
@@ -182,9 +182,8 @@ func (a *Agent) ServeDropper(w http.ResponseWriter, r *http.Request) {
 			} else {
 				fmt.Printf("%s: Dropper -> recipient.\n", d.Uuid)
 			}
-
-		// recipient is not connected
 		} else {
+			// recipient is not connected
 			// write failed message to dropper
 			if t == ws.TextMessage {
 				failedMsg := fmt.Sprintf("{\"status\":\"failed\",\"data\":%s}", msg)
@@ -282,9 +281,8 @@ func (a *Agent) ServeRecipient(w http.ResponseWriter, r *http.Request) {
 			} else {
 				fmt.Printf("%s: Recipient -> dropper.\n", d.Uuid)
 			}
-
-		// dropper is not connected
 		} else {
+			// dropper is not connected
 			// write failed message to recipient
 			if t == ws.TextMessage {
 				failedMsg := fmt.Sprintf("{\"status\":\"failed\",\"data\":%s}", msg)

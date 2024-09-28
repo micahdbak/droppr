@@ -5,6 +5,7 @@ package agent
 
 import (
 	"sync"
+
 	ws "github.com/gorilla/websocket"
 )
 

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"signalchannel/agent"
+	"server/agent"
 )
 
 func main() {
