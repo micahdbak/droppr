@@ -1,0 +1,39 @@
+{
+  "name": "droppr",
+  "version": "0.2.0",
+  "description": "Peer-to-peer file transfer service.",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "tw": "tailwindcss -i ./tailwind.css -o ./public/tailwind.css",
+    "prestart": "npm run tw",
+    "start": "react-scripts start",
+    "prebuild": "npm run tw",
+    "build": "react-scripts build"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router": "^6.27.0",
+    "react-router-dom": "^6.27.0",
+    "react-scripts": "^5.0.1",
+    "tailwindcss": "^3.4.13"
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "proxy": "http://localhost:5050"
+}
