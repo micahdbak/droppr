@@ -13,8 +13,7 @@ export function Page(props) {
         droppr
         <a className="text-blue-400 hover:underline" href="https://droppr.net">.net</a>,&nbsp;
         <a className="text-blue-400 hover:underline" href="https://droppr.me">.me</a>,&nbsp;
-        <a className="text-blue-400 hover:underline" href="https://droppr.ca">.ca</a>,&nbsp;
-        <a className="text-blue-400 hover:underline" href="https://droppr.org">.org</a>
+        <a className="text-blue-400 hover:underline" href="https://droppr.ca">.ca</a>
       </p>
     </div>
   );

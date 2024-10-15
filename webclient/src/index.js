@@ -6,11 +6,11 @@ import {
 } from "react-router-dom";
 
 import { About } from './About.jsx';
+import { Download } from './Download.jsx';
 import { ErrorContainer } from './ErrorContainer.jsx';
 import { Main } from './Main.jsx';
 import { ReceiverContainer } from './ReceiverContainer.jsx';
 import { Success } from './Success.jsx';
-import { Download } from './Download.jsx';
 
 const router = createHashRouter([
   {

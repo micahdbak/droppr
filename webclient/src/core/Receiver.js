@@ -23,7 +23,9 @@ import { FileStore } from './FileStore.js'
  * disconnected    -> Event
  * fileinfochanged -> Event
  * downloadchanged -> Event
+ * processing      -> Event
  * done            -> Event
+ * failed          -> Event
  */
 export class Receiver extends EventTarget {
   // private fields
@@ -47,9 +49,11 @@ export class Receiver extends EventTarget {
     this._fileStore = new FileStore();
     this._fileStore.addEventListener('error', (event) => {
       console.log('Recipient: Error in this._fileStore: ' + event.target.error.toString());
+      this.dispatchEvent(new Event('failed'));
     });
     this._fileStore.addEventListener('blocked', () => {
       console.log('Recipient: Blocked from opening database.');
+      this.dispatchEvent(new Event('failed'));
     });
     this._fileStore.addEventListener('open', this._openPeer.bind(this));
   }
@@ -109,6 +113,11 @@ export class Receiver extends EventTarget {
         event.target.close();
 
         console.log(`Recipient: Got done message for data channel ${label}`);
+
+        // this is the last file; let the caller know we're processing it
+        if (Object.values(this._fileinfo).length === 1) {
+          this.dispatchEvent(new Event('processing'));
+        }
 
         // check if there is a pending file store request
         if (this._request[label].readyState === 'pending') {
@@ -196,6 +205,7 @@ export class Receiver extends EventTarget {
       request = this._fileStore.add(label, this._offset[label], this._blob[label]);
       request.addEventListener('error', (event) => {
         console.log('Recipient: Error in _receiveArrayBuffer: ' + event.target.error.toString());
+        this.dispatchEvent(new Event('failed'));
 
         // TODO: close the channel maybe? retry?
         // consider recovery methods in the event of a DB failure

@@ -1,4 +1,5 @@
 // components
 
-export * from './Page.jsx';
 export * from './Header.jsx';
+export * from './LoadingBar.jsx';
+export * from './Page.jsx';

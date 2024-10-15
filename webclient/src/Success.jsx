@@ -1,17 +1,19 @@
 // Success.jsx
 
 import React from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCheck } from '@fortawesome/free-solid-svg-icons';
 
 import { Page, Header } from './components';
 
-export function Success(props) {
+export function Success() {
   return (
     <Page>
       <Header />
-      <div className="w-64 flex flex-col justify-center items-start gap-4">
-        <img src="/box.png" className="w-52 rounded-xl "></img>
-        <p>All done.</p>
-        <a className="text-blue-400 hover:underline" href="/#">Go back</a>
+      <div className="flex flex-col justify-center items-center">
+        <FontAwesomeIcon className="text-4xl text-green-500 mb-2" icon={faCheck} />
+        <p className="text-xl mb-4">Dropped!</p>
+        <a className="text-sm text-blue-400 hover:underline" href="/#">Go back.</a>
       </div>
     </Page>
   );

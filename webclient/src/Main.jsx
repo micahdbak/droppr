@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
 import { Page, Header } from './components';
+import { Waiting } from './Waiting.jsx';
 import { DropperContainer } from './DropperContainer.jsx';
 
 export function Main() {
@@ -32,7 +33,7 @@ export function Main() {
 
   // display waiting screen if waiting for a promise
   if (isWaiting === true) {
-    return <p>Waiting...</p>;
+    return <Waiting />;
   }
 
   // not waiting, and is dropper; display dropper container
@@ -61,7 +62,7 @@ export function Main() {
   return (
     <Page>
       <Header />
-      <div className="flex flex-col justify-center items-center gap-2 bg-gray-200 w-64 h-64 rounded-full">
+      <div className="flex flex-col justify-center items-center gap-2 bg-gray-200 w-64 h-64 rounded-full mb-16">
         <input type="file" onChange={handleFiles} className="hidden" multiple />
         <button
           className="bg-blue-400 hover:bg-blue-300 text-white px-4 py-2 rounded-lg"

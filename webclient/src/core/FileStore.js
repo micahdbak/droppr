@@ -10,6 +10,7 @@ const _databaseVersion = 3;
  * constructor()            - open the database
  * add(label, offset, blob) - add blob for a file
  * flush(label)             - get a combined blob for a given label
+ * clearBlobs()             - clear the file store
  * close()                  - close the database connection
  *
  * dispatches events:
@@ -39,7 +40,7 @@ export class FileStore extends EventTarget {
       this.dispatchEvent(new Event('error'));
     });
 
-    openRequest.addEventListener('blocked', (event) => {
+    openRequest.addEventListener('blocked', () => {
       this.dispatchEvent(new Event('blocked'));
     });
 
@@ -102,12 +103,6 @@ export class FileStore extends EventTarget {
           combinedBlob = new Blob([combinedBlob, blob], { type });
         }
 
-        // NOTE: could do this to delete the item, but this may force
-        // each blob into memory (as its being removed from disk).
-        // PERKS: can keep a local history of files and re-download them.
-        // FUTURE FEATURE: interactive history of files page, with downloads
-        // REQUIRES: file information be stored in the indexedDB as well as
-        // blobs.
         //cursor.delete();
         cursor.continue(); // continue to the next item
       }
@@ -120,6 +115,31 @@ export class FileStore extends EventTarget {
     });
 
     return combinedBlob;
+  }
+
+  async clearBlobs() {
+    return new Promise((resolve, reject) => {
+      const cursorRequest = this._database
+        .transaction(['blobs'], 'readwrite')
+        .objectStore('blobs')
+        .openCursor();
+
+      cursorRequest.addEventListener('success', (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          cursor.delete();
+          cursor.continue();
+        } else {
+          resolve();
+        }
+      });
+
+      cursorRequest.addEventListener('error', (event) => {
+        console.error(event.target.error);
+        this.error = event.target.error;
+        reject();
+      });
+    })
   }
 
   close() {
