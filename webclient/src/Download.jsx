@@ -13,7 +13,7 @@ function FileRow(props) {
   return (
     <tr className="hover:bg-gray-100">
       <td className="text-blue-400 hover:underline">
-        <a href={href} download>
+        <a href={href} download={name}>
           {name}
         </a>
       </td>

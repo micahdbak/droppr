@@ -80,20 +80,20 @@ export function Main() {
   };
 
   const handleReceive = () => {
-    const dropId = document.querySelector('input[type="text"]').value;
+    const code = document.querySelector('input[type="text"]').value;
 
-    if (!/^([a-zA-Z0-9]{6,6})$/.test(dropId)) {
-      sessionStorage.setItem('error', `The drop ID "${dropId}" is invalid.`)
+    if (!/^([a-zA-Z0-9]{6,6})$/.test(code)) {
+      sessionStorage.setItem('error', `The drop code "${code}" is invalid.`)
       window.location.replace(window.location.origin + "/#error"); // force refresh
     } else {
-      window.location.replace(window.location.origin + `#${dropId}`); // force refresh
+      window.location.replace(window.location.origin + `#${code}`); // force refresh
     }
   }
 
   return (
     <Page>
       <Header />
-      <div className="flex flex-col justify-center items-center gap-2 bg-gray-200 w-64 h-64 rounded-full mb-16">
+      <div className="flex flex-col justify-center items-center gap-2 w-64 h-64 rounded-full mb-16">
         <input type="file" onChange={handleFiles} className="hidden" multiple />
         <button
           className="bg-blue-400 hover:bg-blue-300 text-white px-4 py-2 rounded-lg"
@@ -104,10 +104,12 @@ export function Main() {
         <p>or</p>
         <div className="flex flex-row justify-center items-center gap-2">
           <input
-            className="rounded-lg font-mono px-4 py-2 focus:outline-none focus:ring focus:border-blue-300"
+            className="rounded-lg font-mono px-4 py-2 ring-inset ring-1 ring-gray-400 focus:outline-none focus:ring-2"
             style={{ width: "calc(6ch + 2rem)" }}
             type="text"
             placeholder="A1B2C3"
+            minLength="6"
+            maxLength="6"
           />
           <button
             className="bg-blue-400 hover:bg-blue-300 text-white px-4 py-2 rounded-lg"

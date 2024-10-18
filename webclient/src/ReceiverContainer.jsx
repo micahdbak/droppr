@@ -3,10 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 
 import { Waiting } from './Waiting.jsx';
+import { ReceiverConfirmation } from './ReceiverConfirmation.jsx';
 import { Receiver } from './core';
 import { Page, Header, LoadingBar } from './components';
 import { bytesToHRString } from './utils.js';
@@ -22,24 +21,24 @@ export function ReceiverContainer() {
   const [bytesReceived, setBytesReceived] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
 
-  const { dropId } = useParams();
+  const { code } = useParams();
 
   // on page load
   useEffect(() => {
     console.log('test');
     
-    if (!/^([a-zA-Z0-9]{6,6})$/.test(dropId)) {
-      sessionStorage.setItem('error', `The drop ID "${dropId}" is invalid.`);
+    if (!/^([a-zA-Z0-9]{6,6})$/.test(code)) {
+      sessionStorage.setItem('error', `The drop code "${code}" is invalid.`);
       window.location.replace(window.location.origin + "/#error");
       return;
     }
   }, []);
 
-  const handleReceive = async () => {
+  const onConfirm = async () => {
     try {
       setShouldReceive(true);
       // will throw an error if the drop was not able to be claimed
-      const res = await axios.post("/api/claim/" + dropId.toUpperCase());
+      const res = await axios.post("/api/claim/" + code.toUpperCase());
       setFileinfo(res.data.fileinfo);
       setIsWaiting(false); // stop displaying waiting screen
 
@@ -83,31 +82,7 @@ export function ReceiverContainer() {
   }
 
   if (!shouldReceive) {
-    return (
-      <Page>
-        <Header />
-        <div className="flex flex-col justify-center items-start p-8">
-          <p className="text-2xl mb-2">
-            Are you sure you want<br />to receive&nbsp;
-            <span className="font-mono bg-gray-200 px-2 rounded-lg">{dropId}</span>
-            &nbsp;?
-          </p>
-          <p className="text-xs text-red-400 mb-4">
-            <FontAwesomeIcon icon={faTriangleExclamation} /> Don't
-            receive drops from someone you don't trust.
-          </p>
-          <button
-            className="bg-blue-400 hover:bg-blue-300 text-white px-4 py-2 rounded-lg mb-6"
-            onClick={handleReceive}
-          >
-            Receive
-          </button>
-          <p className="text-sm text-gray-500">
-            Changed your mind? <a className="text-blue-400 hover:underline" href="/#">Go back</a>.
-          </p>
-        </div>
-      </Page>
-    );
+    return <ReceiverConfirmation code={code} onConfirm={onConfirm} />;
   }
 
   // display waiting screen if waiting for a promise
@@ -121,7 +96,8 @@ export function ReceiverContainer() {
   return (
     <Page>
       <Header />
-      <div className="flex flex-col justify-center items-start">
+      <div className="flex flex-col justify-center items-start w-72">
+        <img src="drop.gif" />
         <p className="text-2xl mb-2">Receiving {fileCount} {fileCount > 1 ? "files" : "file"}</p>
         <p className="text-base">{percentTransferred}% done</p>
         <LoadingBar bytes={bytesReceived} total={totalSize} />

@@ -3,8 +3,7 @@
 const _pingRate = process.env.REACT_APP_SC_PING_RATE;
 const _signalChannelURL = process.env.REACT_APP_SC_URL;
 
-/* SignalChannel - Register a drop identifier and communicate with an inter-
- *                 ested peer. Uses WebSocket connections and a known host.
+/* SignalChannel - Signal WebRTC connection info via WebSocket.
  *
  * public methods:
  *

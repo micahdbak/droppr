@@ -2,21 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCopy, faCheck } from '@fortawesome/free-solid-svg-icons';
 
 import { Dropper } from './core';
 import { Header, LoadingBar, Page } from './components';
 import { bytesToHRString } from './utils.js';
+import { DropperWaiting } from './DropperWaiting.jsx';
 
 export function DropperContainer(props) {
   const { files, labels, code } = props;
-  
-  // before transfer
-  const [downloadLinkCopied, setDownloadLinkCopied] = useState(false);
-  const [dots, setDots] = useState("...");
 
-  // during transfer
   const [state, setState] = useState('waiting');
   const [totalSize, setTotalSize] = useState(1);
   const [bytesSent, setBytesSent] = useState(0);
@@ -32,15 +26,8 @@ export function DropperContainer(props) {
     
     const _dropper = new Dropper(files, labels);
 
-    const dotDotDotInterval = setInterval(() => {
-      setDots((_dots) => {
-        return _dots + ".";
-      });
-    }, 3141);
-
     _dropper.addEventListener('connected', () => {
       setState('connected');
-      clearInterval(dotDotDotInterval);
 
       const startTime = Date.now();
 
@@ -67,62 +54,13 @@ export function DropperContainer(props) {
     });
 
     return () => {
-      clearInterval(dotDotDotInterval);
       // it is in vain that we release the dropper
     }
   }, []);
 
-  // show drop ID and prompt user to copy
+  // show drop code and prompt user to copy
   if (state === "waiting") {
-    const downloadLink = window.location.origin + "/#" + code;
-
-    const copyDownloadLink = () => {
-      const linkElement = document.querySelector('input[type="text"]');
-      linkElement.select();
-      linkElement.setSelectionRange(0, downloadLink.length);
-
-      // copy to clipboard
-      navigator.clipboard.writeText(downloadLink);
-
-      setDownloadLinkCopied(true);
-      setTimeout(() => {
-        setDownloadLinkCopied(false);
-      }, 1000); // 1 second
-    };
-
-    return (
-      <Page>
-        <Header />
-        <div className="flex flex-col justify-center items-start">
-          <p className="text-lg">Your drop code is:</p>
-          <p className="text-6xl font-mono bg-gray-200 px-2 rounded-lg">{code}</p>
-          <p className="text-xs mb-4 text-gray-500">{files.length} {files.length > 1 ? "files" : "file"}, {bytesToHRString(totalSize)} bytes.</p>
-          <p className="text-xs">Download link:</p>
-          <div className="flex flex-row gap-2 mb-4">
-            <input
-              type="text"
-              className="font-mono font-bold text-sm focus:outline-none"
-              style={{ width: `${downloadLink.length}ch` }}
-              value={downloadLink}
-              readonly
-            />
-            {downloadLinkCopied ? (
-              <FontAwesomeIcon icon={faCheck} />
-            ) : (
-              <FontAwesomeIcon className="cursor-pointer" icon={faCopy} onClick={copyDownloadLink} />
-            )}
-          </div>
-          <p className="text-xs text-gray-500 mb-8 w-72">
-            Enter {code} at <a className="text-blue-400 hover:underline" href={window.location.origin}>{window.location.origin}</a> or
-            open the above download link to
-            receive this drop.
-          </p>
-          <p className="text-xl mb-16 w-72">
-            Waiting&nbsp;for&nbsp;receiver{dots}
-          </p>
-        </div>
-      </Page>
-    );
+    return <DropperWaiting code={code} totalSize={totalSize} numFiles={files.length} />;
   }
 
   const percentTransferred = (100 * bytesSent / totalSize).toFixed(1);
@@ -130,7 +68,8 @@ export function DropperContainer(props) {
   return (
     <Page>
       <Header />
-      <div className="flex flex-col justify-center items-start">
+      <div className="flex flex-col justify-center items-start w-72">
+        <img src="drop.gif" />
         <p className="text-2xl mb-2">Dropping {files.length} {files.length > 1 ? "files" : "file"}</p>
         <p className="text-base">{percentTransferred}% done</p>
         <LoadingBar bytes={bytesSent} total={totalSize} />

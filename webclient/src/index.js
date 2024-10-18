@@ -34,7 +34,7 @@ const router = createHashRouter([
     element: <About />
   },
   {
-    path: "/:dropId",
+    path: "/:code",
     element: <ReceiverContainer />
   }
 ]);
