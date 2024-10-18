@@ -10,7 +10,7 @@ import { Header, LoadingBar, Page } from './components';
 import { bytesToHRString } from './utils.js';
 
 export function DropperContainer(props) {
-  const { files, dropId } = props;
+  const { files, labels, code } = props;
   
   // before transfer
   const [downloadLinkCopied, setDownloadLinkCopied] = useState(false);
@@ -23,20 +23,14 @@ export function DropperContainer(props) {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
 
   useEffect(() => {
-    let _files = [];
+    // set total size
     let _totalSize = 0;
-
     files.forEach(file => {
-      if (file.size > 0) {
-        _totalSize += file.size;
-        _files.push(file);
-      }
-      // else, skip
+      _totalSize += file.size;
     });
-
     setTotalSize(_totalSize);
     
-    const _dropper = new Dropper(_files);
+    const _dropper = new Dropper(files, labels);
 
     const dotDotDotInterval = setInterval(() => {
       setDots((_dots) => {
@@ -80,7 +74,7 @@ export function DropperContainer(props) {
 
   // show drop ID and prompt user to copy
   if (state === "waiting") {
-    const downloadLink = window.location.origin + "/#" + dropId;
+    const downloadLink = window.location.origin + "/#" + code;
 
     const copyDownloadLink = () => {
       const linkElement = document.querySelector('input[type="text"]');
@@ -101,7 +95,7 @@ export function DropperContainer(props) {
         <Header />
         <div className="flex flex-col justify-center items-start">
           <p className="text-lg">Your drop code is:</p>
-          <p className="text-6xl font-mono bg-gray-200 px-2 rounded-lg">{dropId}</p>
+          <p className="text-6xl font-mono bg-gray-200 px-2 rounded-lg">{code}</p>
           <p className="text-xs mb-4 text-gray-500">{files.length} {files.length > 1 ? "files" : "file"}, {bytesToHRString(totalSize)} bytes.</p>
           <p className="text-xs">Download link:</p>
           <div className="flex flex-row gap-2 mb-4">
@@ -119,7 +113,7 @@ export function DropperContainer(props) {
             )}
           </div>
           <p className="text-xs text-gray-500 mb-8 w-72">
-            Enter {dropId} at <a className="text-blue-400 hover:underline" href={window.location.origin}>{window.location.origin}</a> or
+            Enter {code} at <a className="text-blue-400 hover:underline" href={window.location.origin}>{window.location.origin}</a> or
             open the above download link to
             receive this drop.
           </p>

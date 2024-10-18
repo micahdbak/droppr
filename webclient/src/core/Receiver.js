@@ -7,25 +7,23 @@ import { FileStore } from './FileStore.js'
  *
  * public methods:
  *
- * constructor() - Receive files
- * close()       - Close connection
+ * constructor(fileinfo) - Receive files
+ * close()               - Close connection
  *
  * public fields:
  *
- * fileinfo      - File information
- * download      - Download information
+ * downloading   - Remaining files information
+ * downloaded    - Download information
  * totalSize     - Total size of files being received
  * bytesReceived - Number of bytes received
  *
  * dispatches events:
  *
- * connected       -> Event
- * disconnected    -> Event
- * fileinfochanged -> Event
- * downloadchanged -> Event
- * processing      -> Event
- * done            -> Event
- * failed          -> Event
+ * connected    -> Event
+ * disconnected -> Event
+ * processing   -> Event
+ * done         -> Event
+ * failed       -> Event
  */
 export class Receiver extends EventTarget {
   // private fields
@@ -42,8 +40,17 @@ export class Receiver extends EventTarget {
 
   // constructor
 
-  constructor() {
+  constructor(fileinfo) {
     super();
+
+    // initialize private fields
+    for (let i = 0; i < fileinfo.length; i++) {
+      const label = fileinfo[i].label;
+      this._fileinfo[label] = fileinfo[i];
+      this._blob[label] = null;
+      this._offset[label] = 0;
+      this._request[label] = { readyState: 'done' };
+    }
 
     // open the file store database
     this._fileStore = new FileStore();
@@ -96,95 +103,71 @@ export class Receiver extends EventTarget {
     // text messages should be JSON; attempt to parse it
     const message = JSON.parse(event.data);
 
-    switch (message.type) {
-      case 'fileinfo':
-        this._fileinfo[label] = message.fileinfo;
-        this.dispatchEvent(new Event('fileinfochanged'));
+    if (message.type === 'done') {
+      // close the data channel, since we got the done message
+      event.target.close();
 
-        // initialize these things
-        this._blob[label] = null;
-        this._offset[label] = 0;
-        this._request[label] = { readyState: 'done' };
+      console.log(`Recipient: Got done message for data channel ${label}`);
 
-        break;
+      // this is the last file; let the caller know we're processing it
+      if (Object.values(this._fileinfo).length === 1) {
+        this.dispatchEvent(new Event('processing'));
+      }
 
-      case 'done':
-        // close the data channel, since we got the done message
-        event.target.close();
-
-        console.log(`Recipient: Got done message for data channel ${label}`);
-
-        // this is the last file; let the caller know we're processing it
-        if (Object.values(this._fileinfo).length === 1) {
-          this.dispatchEvent(new Event('processing'));
+      // check if there is a pending file store request
+      if (this._request[label].readyState === 'pending') {
+        try {
+          // wait for this pending request to finish
+          await new Promise((resolve, reject) => {
+            this._request[label].addEventListener('success', resolve);
+            this._request[label].addEventListener('error', reject);
+          });
+        } catch (err) {
+          console.log(`Recipient: Error in _receiveTextMessage for pending request: ${err.toString()}`);
         }
+      }
 
-        // check if there is a pending file store request
-        if (this._request[label].readyState === 'pending') {
-          try {
-            // wait for this pending request to finish
-            await new Promise((resolve, reject) => {
-              this._request[label].addEventListener('success', resolve);
-              this._request[label].addEventListener('error', reject);
-            });
-          } catch (err) {
-            console.log(`Recipient: Error in _receiveTextMessage for pending request: ${err.toString()}`);
-          }
+      delete this._request[label];
+
+      // check if there is a blob waiting to be added to the file store
+      if (this._blob[label] !== null) {
+        // start a new request adding this blob to the file store
+        const request = this._fileStore.add(label, this._offset[label], this._blob[label]);
+
+        try {
+          // wait for this request to finish
+          await new Promise((resolve, reject) => {
+            request.addEventListener('success', resolve);
+            request.addEventListener('error', reject);
+          });
+        } catch (err) {
+          console.log(`Recipient: Error in _receiveTextMessage for pending blob: ${err.toString()}`);
         }
+      }
 
-        delete this._request[label];
+      delete this._blob[label];
 
-        // check if there is a blob waiting to be added to the file store
-        if (this._blob[label] !== null) {
-          // start a new request adding this blob to the file store
-          const request = this._fileStore.add(label, this._offset[label], this._blob[label]);
+      // flush the file from the object store
+      let file = await this._fileStore.flush(label, this._fileinfo[label].size, this._fileinfo[label].type);
 
-          try {
-            // wait for this request to finish
-            await new Promise((resolve, reject) => {
-              request.addEventListener('success', resolve);
-              request.addEventListener('error', reject);
-            });
-          } catch (err) {
-            console.log(`Recipient: Error in _receiveTextMessage for pending blob: ${err.toString()}`);
-          }
-        }
+      // create download link for file
+      const href = URL.createObjectURL(file);
 
-        delete this._blob[label];
+      this._download[label] = { ...this._fileinfo[label], href };
+      // this.bytesReceived will now count using this._download
 
-        // flush the file from the object store
-        let file = await this._fileStore.flush(label, this._fileinfo[label].size, this._fileinfo[label].type);
+      delete this._offset[label];
+      delete this._fileinfo[label];
+      delete this._offset[label];
+      // (wahoo; garbage collected???)
 
-        // create download link for file
-        const href = URL.createObjectURL(file);
-
-        this._download[label] = { ...this._fileinfo[label], href };
-        this.dispatchEvent(new Event('downloadchanged'));
-
-        // this.bytesReceived will now count using this._download
-        delete this._offset[label];
-
-        delete this._fileinfo[label]; // remove the fileinfo for this channel
-        this.dispatchEvent(new Event('fileinfochanged'));
-
-        delete this._offset[label];
-        // all references for this channel should be deleted
-        // (wahoo; garbage collected???)
-
-        // dispatch done event when no more fileinfos
-        if (Object.values(this._fileinfo).length === 0) {
-          this.dispatchEvent(new Event('done'));
-          this.close();
-        }
-
-        break;
-
-      default:
-        console.log(`Recipient: Got unexpected message: ${event.data}`);
-
-        // pass
-
-        break;
+      // dispatch done event when no more fileinfos
+      if (Object.values(this._fileinfo).length === 0) {
+        this.dispatchEvent(new Event('done'));
+        this.close();
+      }
+    } else {
+      console.log(`Recipient: Got unexpected message: ${event.data}`);
     }
   }
 
@@ -222,11 +205,11 @@ export class Receiver extends EventTarget {
 
   // getters
 
-  get fileinfo() {
+  get downloading() {
     return Object.values(this._fileinfo);
   }
 
-  get download() {
+  get downloaded() {
     return Object.values(this._download);
   }
 

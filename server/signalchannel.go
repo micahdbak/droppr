@@ -8,6 +8,8 @@ import (
 	ws "github.com/gorilla/websocket"
 )
 
+// ----------------------------------------------------------------
+
 var upgrader = ws.Upgrader{
 	ReadBufferSize:  0,
 	WriteBufferSize: 0,
@@ -17,6 +19,8 @@ var upgrader = ws.Upgrader{
 	},
 }
 
+// ----------------------------------------------------------------
+
 // a signal channel between two peers
 type signalChannel struct {
 	Id       string
@@ -24,6 +28,8 @@ type signalChannel struct {
 	Receiver *ws.Conn
 	Mux      sync.Mutex
 }
+
+// ----------------------------------------------------------------
 
 func (sc *signalChannel) Connect(role string, conn *ws.Conn) bool {
 	sc.Mux.Lock()
@@ -45,6 +51,8 @@ func (sc *signalChannel) Connect(role string, conn *ws.Conn) bool {
 
 	return true
 }
+
+// ----------------------------------------------------------------
 
 func (sc *signalChannel) Disconnect(role string) {
 	sc.Mux.Lock()
@@ -72,43 +80,46 @@ var (
 	signalChannelsMux sync.Mutex
 )
 
-// authorizes an incoming request (authorized when bool == true) returning the session token, drop ID, and role
-func authorizeSignalChannelRequest(r *http.Request) (string, string, string, error) {
+// ----------------------------------------------------------------
+
+// get the session token and drop ID from cookies
+func getSession(r *http.Request) (string, string) {
 	// get session token from cookies
 	token, err := r.Cookie("session_token")
 	if err != nil {
-		err := fmt.Errorf("bad request")
-		return "", "", "", err
+		return "", ""
 	}
 
 	// get drop ID from cookies
 	id, err := r.Cookie("drop_id")
 	if err != nil {
-		err := fmt.Errorf("bad request")
+		return "", ""
+	}
+
+	// return the existing session
+	return token.Value, id.Value
+}
+
+// ----------------------------------------------------------------
+
+// authorizes an incoming request (authorized when bool == true) returning the session token, drop ID, and role
+func authorizeSignalChannelRequest(r *http.Request) (string, string, string, error) {
+	token, id := getSession(r)
+	if len(token) == 0 || len(id) == 0 {
+		err := fmt.Errorf("invalid session")
 		return "", "", "", err
 	}
 
-	// check if a row exists for this request in the sessions table
-	rows, err := db.Query("SELECT drop_role FROM sessions WHERE token = $1 AND drop_id = $2", token.Value, id.Value)
-	if err != nil || !rows.Next() {
-		err := fmt.Errorf("invalid session with token '%s' and drop ID '%s'", token.Value, id.Value)
-		return "", "", "", err
-	}
-
-	// get role (either "dropper", "receiver") from session
-	var role string
-	rows.Scan(&role) // TODO: handle error (lazy)
-	rows.Close()
-
-	if role != "dropper" && role != "receiver" {
-		// should never happen
-		err := fmt.Errorf("invalid session with token '%s', drop ID '%s', and role '%s'", token.Value, id.Value, role)
+	role, err := selectDropRoleWithTokenAndId(token, id)
+	if err != nil {
 		return "", "", "", err
 	}
 
 	// authorized session; return values
-	return token.Value, id.Value, role, nil
+	return token, id, role, nil
 }
+
+// ----------------------------------------------------------------
 
 // Upgrades an authorized request to a signal channel (WebSocket connection)
 func serveSignalChannel(w http.ResponseWriter, r *http.Request) {
@@ -116,7 +127,7 @@ func serveSignalChannel(w http.ResponseWriter, r *http.Request) {
 
 	_, id, role, err := authorizeSignalChannelRequest(r)
 	if err != nil {
-		fmt.Printf("[Error] in request to /sc: %v\n", err)
+		logError(r, "%v", err)
 		http.Error(w,
 			http.StatusText(http.StatusUnauthorized),
 			http.StatusUnauthorized)
@@ -126,7 +137,7 @@ func serveSignalChannel(w http.ResponseWriter, r *http.Request) {
 	// upgrade request to a WebSocket connection
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		fmt.Printf("[Error] in request to /sc: %v\n", err)
+		logError(r, "%v", err)
 		return
 	}
 	defer conn.Close() // good to be safe
@@ -145,7 +156,7 @@ func serveSignalChannel(w http.ResponseWriter, r *http.Request) {
 	connected := sc.Connect(role, conn)
 	if !connected {
 		conn.WriteMessage(ws.TextMessage, []byte("{\"status\":\"busy\"}"))
-		fmt.Printf("[Error] in request to /sc: %s already connected\n", role)
+		logError(r, "%s already connected", role)
 		return
 	}
 	defer sc.Disconnect(role)

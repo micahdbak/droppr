@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import * as uuid from 'uuid';
 
 import { Page, Header } from './components';
 import { Waiting } from './Waiting.jsx';
@@ -7,8 +8,9 @@ import { DropperContainer } from './DropperContainer.jsx';
 
 export function Main() {
   const [isWaiting, setIsWaiting] = useState(false);
-  const [dropId, setDropId] = useState(null);
+  const [dropCode, setDropCode] = useState(null);
   const [files, setFiles] = useState([]);
+  const [labels, setLabels] = useState([]);
 
   // effect is run when the files state is changed
   useEffect(() => {
@@ -17,9 +19,28 @@ export function Main() {
     if (files.length > 0) {
       const registerDrop = async () => {
         try {
+          // generate data channel labels for the files
+          const _labels = [];
+          for (let i = 0; i < files.length; i++) {
+            _labels.push(uuid.v4()); // generate labels for each file
+          }
+          setLabels(_labels);
+
+          // fileinfo to send to the server
+          const data = files.map((file, i) => {
+            return {
+              label: _labels[i],
+              name: file.name,
+              size: file.size,
+              type: file.type
+            };
+          });
+
           // will throw an error if not able to register
-          const res = await axios.post("/api/register");
-          setDropId(res.data);
+          const res = await axios.post("/api/register", data, {
+            headers: { 'Content-Type': 'application/json' }
+          });
+          setDropCode(res.data.drop_code);
           setIsWaiting(false); // stop displaying waiting screen
         } catch (err) {
           sessionStorage.setItem('error', err.toString())
@@ -38,13 +59,23 @@ export function Main() {
 
   // not waiting, and is dropper; display dropper container
   if (files.length) {
-    return <DropperContainer files={files} dropId={dropId} />
+    return <DropperContainer files={files} labels={labels} code={dropCode} />
   }
 
   // landing page
 
   const handleFiles = (event) => {
-    setFiles(Array.from(event.target.files));
+    let _files = [];
+
+    // don't drop any files with a size of zero
+    Array.from(event.target.files).forEach(file => {
+      if (file.size > 0) {
+        _files.push(file);
+      }
+      // else, skip
+    });
+    
+    setFiles(_files);
     setIsWaiting(true); // should register before displaying dropper
   };
 

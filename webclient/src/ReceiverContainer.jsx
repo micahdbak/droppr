@@ -18,7 +18,6 @@ export function ReceiverContainer() {
 
   // during transfer
   const [fileinfo, setFileinfo] = useState([]);
-  const [download, setDownload] = useState([]);
   const [totalSize, setTotalSize] = useState(1);
   const [bytesReceived, setBytesReceived] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
@@ -38,21 +37,18 @@ export function ReceiverContainer() {
 
   const handleReceive = async () => {
     try {
-      console.log('got here');
       setShouldReceive(true);
       // will throw an error if the drop was not able to be claimed
-      await axios.post("/api/claim/" + dropId.toUpperCase());
-      console.log('got here');
+      const res = await axios.post("/api/claim/" + dropId.toUpperCase());
+      setFileinfo(res.data.fileinfo);
       setIsWaiting(false); // stop displaying waiting screen
 
-      const _receiver = new Receiver();
+      const _receiver = new Receiver(res.data.fileinfo);
 
       _receiver.addEventListener('connected', () => {
         const startTime = Date.now();
 
         setInterval(() => {
-          setFileinfo(_receiver.fileinfo);
-          setDownload(_receiver.download);
           const _totalSize = _receiver.totalSize;
           const _bytesReceived = _receiver.bytesReceived;
 
@@ -70,7 +66,7 @@ export function ReceiverContainer() {
         setIsWaiting(true);
       });
       _receiver.addEventListener('done', async () => {
-        const _download = JSON.stringify(_receiver.download);
+        const _download = JSON.stringify(_receiver.downloaded);
         sessionStorage.setItem('download', _download);
 
         await axios.post('/api/cleanup');
@@ -120,7 +116,7 @@ export function ReceiverContainer() {
   }
 
   const percentTransferred = (100 * bytesReceived / totalSize).toFixed(1);
-  const fileCount = fileinfo.length + download.length;
+  const fileCount = fileinfo.length;
 
   return (
     <Page>

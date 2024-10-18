@@ -1,30 +1,46 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // shared database connection
-var db *sql.DB
+var db *pgxpool.Pool
 
 func init() {
 	signalChannels = make(map[string]*signalChannel)
 }
 
 func main() {
-	fmt.Printf("droppr - Peer to peer file transfer service.\n")
+	logPlain("~~ droppr server ~~")
 
 	var err error
-	db, err = sql.Open("postgres", "dbname=droppr sslmode=disable")
+	db, err = pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return
+		panic(fmt.Sprintf("%v", err))
 	}
+	defer db.Close()
+
+	rows, err := db.Query(context.Background(), "SELECT 'Hello from postgres!'::text AS text")
+	if err != nil || !rows.Next() {
+		panic(fmt.Sprintf("%v", err))
+	}
+
+	var dbText string
+	err = rows.Scan(&dbText)
+	rows.Close()
+
+	if err != nil {
+		panic(fmt.Sprintf("%v", err))
+	}
+
+	logPlain("%s", dbText)
 
 	http.HandleFunc("/api/register", serveRegister)
 	http.HandleFunc("/api/claim/", serveClaim)

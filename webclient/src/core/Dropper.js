@@ -7,13 +7,11 @@ import { FileStream } from './FileStream.js';
  *
  * public methods:
  *
- * constructor(files) - start a drop for files
- * close()            - Close connection
+ * constructor(files, labels) - start a drop for files
+ * close()                    - Close connection
  *
  * public fields:
  *
- * fileinfo - Information about files being sent
- * totalSize - Sum of file sizes
  * bytesSent - Total number of bytes sent
  *
  * dispatches events:
@@ -29,14 +27,9 @@ export class Dropper extends EventTarget {
   _peer; // the peer connection
   _fileStreams = []; // open file streams
 
-  // public fields
-
-  fileinfo = []; // information about the files being dropped
-  totalSize = 0; // total size of files
-
   // constructor
 
-  constructor(files) {
+  constructor(files, labels) {
     super();
 
     // start waiting for peer connection
@@ -50,15 +43,8 @@ export class Dropper extends EventTarget {
 
     // start file streams (data channels) for each file
     for (let i = 0; i < files.length; i++) {
-      const fileStream = new FileStream(this._peer, files[i]);
+      const fileStream = new FileStream(this._peer, files[i], labels[i]);
       this._fileStreams.push(fileStream);
-
-      this.fileinfo.push({
-        name: files[i].name,
-        size: files[i].size,
-        type: files[i].type
-      });
-      this.totalSize += files[i].size;
     }
 
     // watch file streams

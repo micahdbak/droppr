@@ -1,48 +1,192 @@
 package main
 
 import (
-	"crypto/rand"
+	"context"
+	"fmt"
 	"net/http"
+	"time"
 )
 
-// generate a drop ID, 6 random characters of A-Z, 0-9
-func generateDropId() (string, error) {
-	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	bytes := make([]byte, 6)
-
-	_, err := rand.Read(bytes)
-	if err != nil {
-		return "", err
-	}
-
-	// convert each byte in bytes to a character in charset
-	for i := 0; i < 6; i++ {
-		b := bytes[i]
-		bytes[i] = charset[int(b)%len(charset)]
-	}
-
-	return string(bytes), nil
-}
-
-// get the session token and drop ID from cookies
-func getSession(r *http.Request) (string, string) {
-	// get session token from cookies
-	token, err := r.Cookie("session_token")
-	if err != nil {
-		return "", ""
-	}
-
-	// get drop ID from cookies
-	id, err := r.Cookie("drop_id")
-	if err != nil {
-		return "", ""
-	}
-
-	// return the existing session
-	return token.Value, id.Value
-}
+// ----------------------------------------------------------------
 
 // set necessary CORS header(s) in HTTP response
 func setCORS(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
+
+// ----------------------------------------------------------------
+
+// performs http.Error with http.StatusText(code)
+func writeHTTPError(w *http.ResponseWriter, code int) {
+	http.Error(*w, http.StatusText(code), code)
+}
+
+// ----------------------------------------------------------------
+
+func logPlain(format string, a ...any) {
+	var arglist []any
+	arglist = append(arglist, time.Now().Format("2006-01-02 15:04:05"))
+	arglist = append(arglist, a...)
+
+	fmt.Printf("%s: "+format+"\n", arglist...)
+}
+
+// ----------------------------------------------------------------
+
+func logInfo(r *http.Request, format string, a ...any) {
+	var arglist []any
+	arglist = append(arglist, time.Now().Format("2006-01-02 15:04:05"))
+	arglist = append(arglist, r.URL.Path)
+	arglist = append(arglist, a...)
+
+	fmt.Printf("%s: [Info] in request to %s: "+format+"\n", arglist...)
+}
+
+// ----------------------------------------------------------------
+
+func logWarning(r *http.Request, format string, a ...any) {
+	var arglist []any
+	arglist = append(arglist, time.Now().Format("2006-01-02 15:04:05"))
+	arglist = append(arglist, r.URL.Path)
+	arglist = append(arglist, a...)
+
+	fmt.Printf("%s: [Warning] in request to %s: "+format+"\n", arglist...)
+}
+
+// ----------------------------------------------------------------
+
+func logError(r *http.Request, format string, a ...any) {
+	var arglist []any
+	arglist = append(arglist, time.Now().Format("2006-01-02 15:04:05"))
+	arglist = append(arglist, r.URL.Path)
+	arglist = append(arglist, a...)
+
+	fmt.Printf("%s: [Error] in request to %s: "+format+"\n", arglist...)
+}
+
+// ----------------------------------------------------------------
+
+// returns the drop role found with session token and drop id
+func selectDropRoleWithTokenAndId(token string, dropId string) (string, error) {
+	rows, err := db.Query(
+		context.Background(),
+		"SELECT drop_role FROM sessions WHERE token = $1 AND drop_id = $2",
+		token,
+		dropId,
+	)
+	if err != nil || !rows.Next() {
+		if err == nil {
+			err = fmt.Errorf("query returned zero rows")
+		}
+		return "", err
+	}
+
+	var role string
+	err = rows.Scan(&role)
+	rows.Close()
+
+	// just to be safe
+	if err != nil {
+		return "", err
+	}
+
+	if role != "dropper" && role != "receiver" {
+		err = fmt.Errorf("\"%s\" is not a valid drop role", role)
+		return "", err
+	}
+
+	return role, nil
+}
+
+// ----------------------------------------------------------------
+
+// a drop is considered busy if a session exists for the dropper and the receiver
+func isDropBusy(dropId string) (bool, error) {
+	rows, err := db.Query(
+		context.Background(),
+		`SELECT 
+			COUNT(CASE WHEN drop_role = 'dropper' THEN 1 END) AS droppers,
+			COUNT(CASE WHEN drop_role = 'receiver' THEN 1 END) AS receivers
+		FROM sessions
+		WHERE drop_id = $1`,
+		dropId,
+	)
+	if err != nil || !rows.Next() {
+		if err == nil {
+			err = fmt.Errorf("query returned zero rows")
+		}
+		return false, err
+	}
+
+	var droppers, receivers int
+	err = rows.Scan(&droppers, &receivers)
+	rows.Close()
+
+	// just to be safe
+	if err != nil {
+		return false, err
+	}
+
+	return droppers != 0 && receivers != 0, nil
+}
+
+// ----------------------------------------------------------------
+
+func selectFiles(dropId string) ([]file, error) {
+	rows, err := db.Query(
+		context.Background(),
+		"SELECT label, name, size, type FROM files WHERE drop_id = $1 ORDER BY name COLLATE \"en_US.UTF-8\" ASC",
+		dropId,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var files []file
+
+	for rows.Next() {
+		var f file
+		if err = rows.Scan(&f.Label, &f.Name, &f.Size, &f.Type); err == nil {
+			files = append(files, f)
+		} else {
+			break
+		}
+	}
+
+	rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return files, nil
+}
+
+// ----------------------------------------------------------------
+
+// insert a row into sessions with the provided drop ID and role, returning the session token
+func insertSession(dropId string, dropRole string) (string, error) {
+	rows, err := db.Query(
+		context.Background(),
+		"INSERT INTO sessions(drop_id, drop_role) VALUES ($1, $2) RETURNING token",
+		dropId,
+		dropRole,
+	)
+	if err != nil || !rows.Next() {
+		if err == nil {
+			err = fmt.Errorf("query returned zero rows")
+		}
+		return "", err
+	}
+
+	var token string
+	err = rows.Scan(&token)
+	rows.Close()
+
+	// just to be safe
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
 }

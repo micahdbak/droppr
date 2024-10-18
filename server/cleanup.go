@@ -1,18 +1,30 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"time"
 )
+
+// ----------------------------------------------------------------
+
+func completeDrop(dropId string) error {
+	_, err := db.Query(context.Background(), "UPDATE drops SET is_complete = 't' WHERE id = $1", dropId)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ----------------------------------------------------------------
 
 // Clean up cookies
 func serveCleanup(w http.ResponseWriter, r *http.Request) {
 	setCORS(&w)
 
 	if r.Method != http.MethodPost {
-		http.Error(w,
-			http.StatusText(http.StatusBadRequest),
-			http.StatusBadRequest)
+		writeHTTPError(&w, http.StatusBadRequest)
 		return
 	}
 
@@ -36,7 +48,13 @@ func serveCleanup(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	// TODO: move existing session out of the sessions table
-
-	w.Write([]byte("OK"))
+	_, id := getSession(r)
+	if len(id) > 0 {
+		if err := completeDrop(id); err != nil {
+			logWarning(r, "%v", err)
+			// don't report this error to the requester; as far as they are concerned, the cookies are deleted
+		} else {
+			logInfo(r, "completed drop %s", id)
+		}
+	}
 }
