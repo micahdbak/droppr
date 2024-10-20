@@ -1,3 +1,5 @@
+// claim.go
+
 package main
 
 import (
@@ -13,28 +15,69 @@ import (
 
 // select the drop id
 func selectDropIdWithCode(code string) (string, error) {
-	rows, err := db.Query(
+	row := db.QueryRow(
 		context.Background(),
 		"SELECT id FROM drops WHERE code = $1 AND is_complete = 'f'",
 		code,
 	)
-	if err != nil || !rows.Next() {
-		if err == nil {
-			err = fmt.Errorf("query returned zero rows")
-		}
-		return "", err
-	}
 
 	var id string
-	err = rows.Scan(&id)
-	rows.Close()
-
-	// just to be safe
+	err := row.Scan(&id)
 	if err != nil {
 		return "", err
 	}
 
 	return id, nil
+}
+
+// ----------------------------------------------------------------
+
+// Peeks at the fileinfo for a drop
+func servePeek(w http.ResponseWriter, r *http.Request) {
+	setCORS(&w)
+
+	// ensure GET request
+	if r.Method != http.MethodGet {
+		writeHTTPError(&w, http.StatusBadRequest)
+		return
+	}
+
+	// get drop code from request path and check it against a regex
+	code := r.URL.Path[10:] // /api/peek/:code
+	matches, err := regexp.Match("^([a-zA-Z0-9]{6,6})$", []byte(code))
+	if err != nil || !matches {
+		writeHTTPError(&w, http.StatusBadRequest)
+		return
+	}
+
+	// get drop ID with code; err will fire if the drop code is not for an incomplete drop
+	id, err := selectDropIdWithCode(code)
+	if err != nil {
+		logWarning(r, "%v", err)
+		writeHTTPError(&w, http.StatusNotFound)
+		return
+	}
+
+	// get files for this drop
+	files, err := selectFiles(id)
+	if err != nil {
+		logError(r, "%v", err)
+		writeHTTPError(&w, http.StatusNotFound)
+		return
+	}
+
+	// convert files array to JSON byte array
+	files_json, err := json.Marshal(files)
+	if err != nil {
+		logError(r, "%v", err)
+		writeHTTPError(&w, http.StatusInternalServerError)
+		return
+	}
+
+	// provide file info to requester
+	s := fmt.Sprintf("{\"fileinfo\":%s}", files_json)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(s))
 }
 
 // ----------------------------------------------------------------

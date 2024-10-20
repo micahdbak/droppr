@@ -1,25 +1,16 @@
+// DropperWaiting.jsx
+
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCopy, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faCopy, faCheck, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 
-import { Page, Header } from './components';
-import { bytesToHRString } from './utils';
+import { Page, Header, AppWindow } from './components';
+import { bytesToHRString } from './core';
 
 export function DropperWaiting(props) {
   const { code, totalSize, numFiles } = props;
 
-  const [dots, setDots] = useState('...');
   const [downloadLinkCopied, setDownloadLinkCopied] = useState(false);
-
-  useEffect(() => {
-    const dotsInterval = setInterval(() => {
-      setDots(_dots => _dots + '.');
-    }, 3000); // every 3 seconds
-
-    return () => {
-      clearInterval(dotsInterval);
-    }
-  }, []);
 
   const downloadLink = window.location.origin + "/#" + code;
 
@@ -40,32 +31,32 @@ export function DropperWaiting(props) {
   return (
     <Page>
       <Header />
-      <div className="flex flex-col justify-center items-start">
-        <p className="text-lg">Your drop code is:</p>
-        <p className="text-6xl font-mono bg-gray-200 px-2 rounded-lg">{code}</p>
-        <p className="text-xs mb-4 text-gray-500">{numFiles} {numFiles === 1 ? "file" : "files"}, {bytesToHRString(totalSize)} bytes.</p>
-        <p className="text-xs">Download link:</p>
-        <div className="flex flex-row gap-2 mb-4">
-          <input
-            type="text"
-            className="font-mono font-bold text-sm focus:outline-none"
-            style={{ width: `${downloadLink.length}ch` }}
-            value={downloadLink}
-            readOnly={true}
-          />
-          {downloadLinkCopied ? (
-            <FontAwesomeIcon icon={faCheck} />
-          ) : (
-            <FontAwesomeIcon className="cursor-pointer" icon={faCopy} onClick={copyDownloadLink} />
-          )}
-        </div>
-        <p className="text-xs text-gray-500 mb-8 w-72">
-          Enter {code} at <a className="text-blue-400 hover:underline" href={window.location.origin}>{window.location.origin}</a> or
-          open the above download link to
-          receive this drop.
-        </p>
-        <p className="text-xl mb-16 w-72">
-          Waiting&nbsp;for&nbsp;receiver{dots}
+      <div className="flex flex-col gap-2 justify-center align-center">
+        <AppWindow titleText="Waiting for receiver..." imgSrc="waiting.gif">
+          <div className="flex flex-col items-start">
+            <p className="text-lg">Your drop code is:</p>
+            <p className="text-6xl font-mono bg-gray-200 px-2 rounded-lg">{code}</p>
+            <p className="text-xs mb-4 text-gray-500">{numFiles} {numFiles === 1 ? "file" : "files"}, {bytesToHRString(totalSize)}.</p>
+            <p className="text-xs">Download link:</p>
+            <div className="flex flex-row gap-2 mb-4">
+              <input
+                type="text"
+                className="font-mono font-bold text-sm focus:outline-none"
+                style={{ width: `${downloadLink.length}ch` }}
+                value={downloadLink}
+                readOnly={true}
+              />
+              {downloadLinkCopied ? (
+                <FontAwesomeIcon icon={faCheck} />
+              ) : (
+                <FontAwesomeIcon className="cursor-pointer" icon={faCopy} onClick={copyDownloadLink} />
+              )}
+            </div>
+          </div>
+        </AppWindow>
+        <p className="text-center text-sm text-red-400">
+          <FontAwesomeIcon icon={faTriangleExclamation} />
+          &emsp;Don't close this page.
         </p>
       </div>
     </Page>

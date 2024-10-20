@@ -1,3 +1,5 @@
+// utils.go
+
 package main
 
 import (
@@ -68,24 +70,15 @@ func logError(r *http.Request, format string, a ...any) {
 
 // returns the drop role found with session token and drop id
 func selectDropRoleWithTokenAndId(token string, dropId string) (string, error) {
-	rows, err := db.Query(
+	row := db.QueryRow(
 		context.Background(),
 		"SELECT drop_role FROM sessions WHERE token = $1 AND drop_id = $2",
 		token,
 		dropId,
 	)
-	if err != nil || !rows.Next() {
-		if err == nil {
-			err = fmt.Errorf("query returned zero rows")
-		}
-		return "", err
-	}
 
 	var role string
-	err = rows.Scan(&role)
-	rows.Close()
-
-	// just to be safe
+	err := row.Scan(&role)
 	if err != nil {
 		return "", err
 	}
@@ -102,7 +95,7 @@ func selectDropRoleWithTokenAndId(token string, dropId string) (string, error) {
 
 // a drop is considered busy if a session exists for the dropper and the receiver
 func isDropBusy(dropId string) (bool, error) {
-	rows, err := db.Query(
+	row := db.QueryRow(
 		context.Background(),
 		`SELECT 
 			COUNT(CASE WHEN drop_role = 'dropper' THEN 1 END) AS droppers,
@@ -111,18 +104,9 @@ func isDropBusy(dropId string) (bool, error) {
 		WHERE drop_id = $1`,
 		dropId,
 	)
-	if err != nil || !rows.Next() {
-		if err == nil {
-			err = fmt.Errorf("query returned zero rows")
-		}
-		return false, err
-	}
 
 	var droppers, receivers int
-	err = rows.Scan(&droppers, &receivers)
-	rows.Close()
-
-	// just to be safe
+	err := row.Scan(&droppers, &receivers)
 	if err != nil {
 		return false, err
 	}
@@ -166,24 +150,15 @@ func selectFiles(dropId string) ([]file, error) {
 
 // insert a row into sessions with the provided drop ID and role, returning the session token
 func insertSession(dropId string, dropRole string) (string, error) {
-	rows, err := db.Query(
+	row := db.QueryRow(
 		context.Background(),
 		"INSERT INTO sessions(drop_id, drop_role) VALUES ($1, $2) RETURNING token",
 		dropId,
 		dropRole,
 	)
-	if err != nil || !rows.Next() {
-		if err == nil {
-			err = fmt.Errorf("query returned zero rows")
-		}
-		return "", err
-	}
 
 	var token string
-	err = rows.Scan(&token)
-	rows.Close()
-
-	// just to be safe
+	err := row.Scan(&token)
 	if err != nil {
 		return "", err
 	}

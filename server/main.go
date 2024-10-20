@@ -1,3 +1,5 @@
+// main.go
+
 package main
 
 import (
@@ -27,15 +29,10 @@ func main() {
 	}
 	defer db.Close()
 
-	rows, err := db.Query(context.Background(), "SELECT 'Hello from postgres!'::text AS text")
-	if err != nil || !rows.Next() {
-		panic(fmt.Sprintf("%v", err))
-	}
+	row := db.QueryRow(context.Background(), "SELECT 'Hello from postgres!'::text AS text")
 
 	var dbText string
-	err = rows.Scan(&dbText)
-	rows.Close()
-
+	err = row.Scan(&dbText)
 	if err != nil {
 		panic(fmt.Sprintf("%v", err))
 	}
@@ -43,6 +40,7 @@ func main() {
 	logPlain("%s", dbText)
 
 	http.HandleFunc("/api/register", serveRegister)
+	http.HandleFunc("/api/peek/", servePeek)
 	http.HandleFunc("/api/claim/", serveClaim)
 	http.HandleFunc("/api/cleanup", serveCleanup)
 	http.HandleFunc("/sc", serveSignalChannel)

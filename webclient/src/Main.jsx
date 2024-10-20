@@ -1,9 +1,10 @@
+// Main.jsx
+
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import * as uuid from 'uuid';
 
-import { Page, Header } from './components';
-import { Waiting } from './Waiting.jsx';
+import { AppWindow, Page, Header } from './components';
 import { DropperContainer } from './DropperContainer.jsx';
 
 export function Main() {
@@ -44,7 +45,8 @@ export function Main() {
           setIsWaiting(false); // stop displaying waiting screen
         } catch (err) {
           sessionStorage.setItem('error', err.toString())
-          window.location.replace(window.location.origin + "/#error"); // force refresh
+          window.location.href = window.location.origin + "/#error";
+          window.location.reload();
         }
       };
 
@@ -54,7 +56,7 @@ export function Main() {
 
   // display waiting screen if waiting for a promise
   if (isWaiting === true) {
-    return <Waiting />;
+    return <></>; // blank screen
   }
 
   // not waiting, and is dropper; display dropper container
@@ -84,35 +86,41 @@ export function Main() {
 
     if (!/^([a-zA-Z0-9]{6,6})$/.test(code)) {
       sessionStorage.setItem('error', `The drop code "${code}" is invalid.`)
-      window.location.replace(window.location.origin + "/#error"); // force refresh
+      window.location.href = window.location.origin + "/#error";
+      window.location.reload();
     } else {
-      window.location.replace(window.location.origin + `#${code}`); // force refresh
+      window.location.href = window.location.origin + `#${code}`;
+      window.location.reload();
     }
   }
 
   return (
     <Page>
       <Header />
-      <div className="flex flex-col justify-center items-center gap-2 w-64 h-64 rounded-full mb-16">
-        <input type="file" onChange={handleFiles} className="hidden" multiple />
-        <button
-          className="bg-blue-400 hover:bg-blue-300 text-white px-4 py-2 rounded-lg"
-          onClick={() => document.querySelector('input[type="file"]').click()}
-        >
-          Send Files
-        </button>
-        <p>or</p>
-        <div className="flex flex-row justify-center items-center gap-2">
+      <div className="flex flex-col gap-2 justify-center align-center">
+        <AppWindow titleText="Have files to send?" imgSrc="drop_files.png">
+          <p className="text-lg">Drop Files</p>
+          <p className="mb-1">or</p>
+          <input type="file" onChange={handleFiles} className="hidden" multiple />
+          <button
+            className="text-lg bg-gray-700 hover:bg-gray-500 text-white px-4 py-2 rounded-xl"
+            onClick={() => document.querySelector('input[type="file"]').click()}
+          >
+            Browse Files
+          </button>
+        </AppWindow>
+        <div className="flex flex-row justify-center items-center gap-1">
+          <p className="text-sm mr-2">Have a code?</p>
           <input
-            className="rounded-lg font-mono px-4 py-2 ring-inset ring-1 ring-gray-400 focus:outline-none focus:ring-2"
-            style={{ width: "calc(6ch + 2rem)" }}
+            className="rounded-lg font-mono text-sm px-2 py-1 ring-inset ring-1 ring-gray-400 focus:outline-none focus:ring-2"
+            style={{ width: "calc(6ch + 1rem)" }}
             type="text"
             placeholder="A1B2C3"
             minLength="6"
             maxLength="6"
           />
           <button
-            className="bg-blue-400 hover:bg-blue-300 text-white px-4 py-2 rounded-lg"
+            className="bg-gray-700 hover:bg-gray-500 text-white text-sm px-2 py-1 rounded-lg"
             onClick={handleReceive}
           >
             Receive

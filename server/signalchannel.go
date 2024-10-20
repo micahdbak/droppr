@@ -1,3 +1,5 @@
+// signalchannel.go
+
 package main
 
 import (

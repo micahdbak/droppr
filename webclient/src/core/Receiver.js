@@ -1,7 +1,6 @@
 // Receiver.js
 
 import { Peer } from './Peer.js';
-import { FileStore } from './FileStore.js'
 
 /* Receiver - Receive files
  *
@@ -40,7 +39,7 @@ export class Receiver extends EventTarget {
 
   // constructor
 
-  constructor(fileinfo) {
+  constructor(fileinfo, fileStore) {
     super();
 
     // initialize private fields
@@ -52,8 +51,8 @@ export class Receiver extends EventTarget {
       this._request[label] = { readyState: 'done' };
     }
 
-    // open the file store database
-    this._fileStore = new FileStore();
+    // add event listeners to the file store
+    this._fileStore = fileStore;
     this._fileStore.addEventListener('error', (event) => {
       console.log('Recipient: Error in this._fileStore: ' + event.target.error.toString());
       this.dispatchEvent(new Event('failed'));
@@ -62,10 +61,7 @@ export class Receiver extends EventTarget {
       console.log('Recipient: Blocked from opening database.');
       this.dispatchEvent(new Event('failed'));
     });
-    this._fileStore.addEventListener('open', this._openPeer.bind(this));
-  }
 
-  _openPeer() {
     // open a peer connection with the dropper
     this._peer = new Peer(false);
     this._peer.addEventListener('connected', () => {
@@ -111,6 +107,7 @@ export class Receiver extends EventTarget {
 
       // this is the last file; let the caller know we're processing it
       if (Object.values(this._fileinfo).length === 1) {
+        this.close(); // close peer connection, as we're done receiving
         this.dispatchEvent(new Event('processing'));
       }
 
@@ -252,11 +249,6 @@ export class Receiver extends EventTarget {
   // public methods
 
   close() {
-    try {
-      this._peer.close();
-      this._fileStore.close();
-    } catch (err) {
-      // pass
-    }
+    this._peer.close();
   }
 }

@@ -1,4 +1,4 @@
-// ErrorContainer.jsx
+// ShowError.jsx
 
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -6,7 +6,7 @@ import { faFaceDizzy } from '@fortawesome/free-solid-svg-icons';
 
 import { Page, Header } from './components';
 
-export function ErrorContainer() {
+export function ShowError() {
   const [error, setError] = useState(null);
 
   useEffect(() => {

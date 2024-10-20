@@ -4,106 +4,149 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router';
 
-import { Waiting } from './Waiting.jsx';
-import { ReceiverConfirmation } from './ReceiverConfirmation.jsx';
 import { Receiver } from './core';
-import { Page, Header, LoadingBar } from './components';
-import { bytesToHRString } from './utils.js';
+import { ReceiverConfirm } from './ReceiverConfirm.jsx';
+import { ReceiverProcessing } from './ReceiverProcessing.jsx';
+import { ReceiverTransfer } from './ReceiverTransfer.jsx';
+
+const STATE_CONFIRM = 'confirm';
+const STATE_CONNECTING = 'connecting';
+const STATE_RECEIVING = 'receiving';
+const STATE_PROCESSING = 'processing';
 
 export function ReceiverContainer() {
   // before transfer
-  const [shouldReceive, setShouldReceive] = useState(false);
-  const [isWaiting, setIsWaiting] = useState(true);
+  const [state, setState] = useState(STATE_CONFIRM);
 
   // during transfer
   const [fileinfo, setFileinfo] = useState([]);
   const [totalSize, setTotalSize] = useState(1);
   const [bytesReceived, setBytesReceived] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  const { code } = useParams();
+  const { code } = useParams(); // code is in URL fragment
 
   // on page load
   useEffect(() => {
-    console.log('test');
-    
     if (!/^([a-zA-Z0-9]{6,6})$/.test(code)) {
+      // go to ShowError.jsx
       sessionStorage.setItem('error', `The drop code "${code}" is invalid.`);
-      window.location.replace(window.location.origin + "/#error");
+      window.location.href = window.location.origin + "/#error";
+      window.location.reload();
       return;
     }
   }, []);
 
   const onConfirm = async () => {
-    try {
-      setShouldReceive(true);
-      // will throw an error if the drop was not able to be claimed
-      const res = await axios.post("/api/claim/" + code.toUpperCase());
-      setFileinfo(res.data.fileinfo);
-      setIsWaiting(false); // stop displaying waiting screen
+    // run exactly once on execution of JS within this component
+    if (window.___DROPPR___.receiver === null) {
+      window.___DROPPR___.receiver = 1; // incase double-click or smthn
 
-      const _receiver = new Receiver(res.data.fileinfo);
+      try {
+        // display <></> until connected
+        setState(STATE_CONNECTING);
 
-      _receiver.addEventListener('connected', () => {
-        const startTime = Date.now();
+        // will throw an error if the drop was not able to be claimed
+        const res = await axios.post("/api/claim/" + code.toUpperCase());
+        setFileinfo(res.data.fileinfo);
 
-        setInterval(() => {
-          const _totalSize = _receiver.totalSize;
-          const _bytesReceived = _receiver.bytesReceived;
+        // calculate total size
+        let _totalSize = 0;
+        res.data.fileinfo.forEach(file => {
+          _totalSize += file.size;
+        });
+        setTotalSize(_totalSize);
 
-          const secondsElapsed = (Date.now() - startTime) / 1000;
-          const averageSPB = secondsElapsed / _bytesReceived; // SPB = seconds per byte
-          const _remainingSeconds = (_totalSize - _bytesReceived) * averageSPB;
+        // will be used by ReceiverDownload.jsx
+        sessionStorage.setItem('totalSize', JSON.stringify(_totalSize));
 
-          setTotalSize(_totalSize);
-          setBytesReceived(_bytesReceived);
-          setRemainingSeconds(Math.round(_remainingSeconds));
-        }, 250);
-      });
-      _receiver.addEventListener('disconnected', () => { /* pass */ });
-      _receiver.addEventListener('processing', async () => {
-        setIsWaiting(true);
-      });
-      _receiver.addEventListener('done', async () => {
-        const _download = JSON.stringify(_receiver.downloaded);
-        sessionStorage.setItem('download', _download);
+        // this is initialized before root.render(...) in index.js
+        const fileStore = window.___DROPPR___.fileStore;
+        const receiver = new Receiver(res.data.fileinfo, fileStore);
+        window.___DROPPR___.receiver = receiver;
+        let checkReceiverInterval = null;
 
-        await axios.post('/api/cleanup');
-        window.location.replace(window.location.origin + "/#download"); // force refresh
-      });
-      _receiver.addEventListener('failed', () => {
-        sessionStorage.setItem('error', 'Something broke.');
-        window.location.replace(window.location.origin + "/#error"); // force refresh
-      });
-    } catch (err) {
-      sessionStorage.setItem('error', err.toString())
-      window.location.replace(window.location.origin + "/#error");
+        // a peer has connected
+        receiver.addEventListener('connected', () => {
+          setState(STATE_RECEIVING); // show ReceiverTransfer.jsx
+          const startTime = Date.now(); // for checkReceiverInterval
+
+          checkReceiverInterval = setInterval(() => {
+            const _bytesReceived = receiver.bytesReceived;
+
+            // calculate remaining seconds
+            const _elapsedSeconds = (Date.now() - startTime) / 1000;
+            const averageSPB = _elapsedSeconds / _bytesReceived; // SPB = seconds per byte
+            const _remainingSeconds = (_totalSize - _bytesReceived) * averageSPB;
+
+            setBytesReceived(_bytesReceived);
+            setRemainingSeconds(Math.round(_remainingSeconds));
+            setElapsedSeconds(_elapsedSeconds); // for ReceiverProcessing.jsx
+
+            // for ReceiverDownload.jsx
+            sessionStorage.setItem('elapsedSeconds', _elapsedSeconds);
+          }, 250); // 250ms
+        });
+
+        // the connection was broken, but the receiver will attempt to reconnect
+        receiver.addEventListener('disconnected', () => {
+          // display <></> until connected
+          setState(STATE_CONNECTING);
+        });
+
+        // the connection has failed and will not attempt to reconnect
+        receiver.addEventListener('failed', () => {
+          // go to ShowError.jsx
+          sessionStorage.setItem('error', 'Something broke.');
+          window.location.href = window.location.origin + "/#error";
+          window.location.reload();
+        });
+
+        // all files have been downloaded and the receiver is now preparing the download information
+        receiver.addEventListener('processing', async () => {
+          setState(STATE_PROCESSING); // show ReceiverProcessing.jsx
+          clearInterval(checkReceiverInterval); // stop checking the receiver
+        });
+
+        receiver.addEventListener('done', async () => {
+          const download = JSON.stringify(receiver.downloaded);
+          sessionStorage.setItem('download', download); // for ReceiverDownload.jsx
+
+          // go to ReceiverDownload.jsx
+          await axios.post('/api/cleanup');
+          window.location.href = window.location.origin + "/#download";
+          window.location.reload();
+        });
+      } catch (err) {
+        // go to ShowError.jsx
+        sessionStorage.setItem('error', err.toString())
+        window.location.href = window.location.origin + "/#error";
+        window.location.reload();
+      }
     }
   }
 
-  if (!shouldReceive) {
-    return <ReceiverConfirmation code={code} onConfirm={onConfirm} />;
+  if (state === STATE_CONFIRM) {
+    return <ReceiverConfirm code={code} onConfirm={onConfirm} />;
   }
 
-  // display waiting screen if waiting for a promise
-  if (isWaiting) {
-    return <Waiting />;
+  if (state === STATE_CONNECTING) {
+    return <></>; // blank screen
   }
 
-  const percentTransferred = (100 * bytesReceived / totalSize).toFixed(1);
-  const fileCount = fileinfo.length;
+  if (state === STATE_PROCESSING) {
+    return <ReceiverProcessing elapsedSeconds={elapsedSeconds} totalSize={totalSize} />;
+  }
+
+  // assume state === STATE_RECEIVING
 
   return (
-    <Page>
-      <Header />
-      <div className="flex flex-col justify-center items-start w-72">
-        <img src="drop.gif" />
-        <p className="text-2xl mb-2">Receiving {fileCount} {fileCount > 1 ? "files" : "file"}</p>
-        <p className="text-base">{percentTransferred}% done</p>
-        <LoadingBar bytes={bytesReceived} total={totalSize} />
-        <p className="text-sm text-gray-500 mb-3">{bytesToHRString(bytesReceived)} of {bytesToHRString(totalSize)}</p>
-        <p className="text-base">{remainingSeconds} {remainingSeconds === 1 ? "second" : "seconds"} remaining</p>
-      </div>
-    </Page>
+    <ReceiverTransfer
+      numFiles={fileinfo.length}
+      bytesReceived={bytesReceived}
+      totalSize={totalSize}
+      remainingSeconds={remainingSeconds}
+    />
   );
 }

@@ -15,9 +15,9 @@ const _databaseVersion = 3;
  *
  * dispatches events:
  *
- * error   -> Event
- * blocked -> Event
- * open    -> Event
+ * openerror -> Event
+ * open      -> Event
+ * error     -> Event
  */
 export class FileStore extends EventTarget {
   // private fields
@@ -37,11 +37,12 @@ export class FileStore extends EventTarget {
 
     openRequest.addEventListener('error', (event) => {
       this.error = event.target.error;
-      this.dispatchEvent(new Event('error'));
+      this.dispatchEvent(new Event('openerror'));
     });
 
     openRequest.addEventListener('blocked', () => {
-      this.dispatchEvent(new Event('blocked'));
+      this.error = new Error('indexedDB open request was blocked');
+      this.dispatchEvent(new Event('openerror'));
     });
 
     openRequest.addEventListener('upgradeneeded', (event) => {
@@ -57,10 +58,11 @@ export class FileStore extends EventTarget {
       });
     });
 
-    openRequest.addEventListener('success', (event) => {
+    openRequest.addEventListener('success', async (event) => {
       this._database = event.target.result;
-      this.dispatchEvent(new Event('open'));
       this._openRequest = null;
+
+      this.dispatchEvent(new Event('open'));
     });
   }
 

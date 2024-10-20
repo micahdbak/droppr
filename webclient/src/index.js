@@ -1,3 +1,5 @@
+// index.js (entry-point for webclient)
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import {
@@ -5,12 +7,13 @@ import {
   RouterProvider,
 } from "react-router-dom";
 
+import { FileStore } from './core/index.js';
 import { About } from './About.jsx';
-import { Download } from './Download.jsx';
-import { ErrorContainer } from './ErrorContainer.jsx';
 import { Main } from './Main.jsx';
+import { DropperSuccess } from './DropperSuccess.jsx';
 import { ReceiverContainer } from './ReceiverContainer.jsx';
-import { Success } from './Success.jsx';
+import { ReceiverDownload } from './ReceiverDownload.jsx';
+import { ShowError } from './ShowError.jsx';
 
 const router = createHashRouter([
   {
@@ -19,15 +22,15 @@ const router = createHashRouter([
   },
   {
     path: "/error",
-    element: <ErrorContainer />
+    element: <ShowError />
   },
   {
     path: "/success",
-    element: <Success />
+    element: <DropperSuccess />
   },
   {
     path: "/download",
-    element: <Download />
+    element: <ReceiverDownload />
   },
   {
     path: "/about",
@@ -39,7 +42,19 @@ const router = createHashRouter([
   }
 ]);
 
+const fileStore = new FileStore();
+window.___DROPPR___ = {
+  fileStore: fileStore,
+  dropper: null,
+  receiver: null
+};
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-  <RouterProvider router={router} />
-);
+
+fileStore.addEventListener('open', () => {
+  root.render(<RouterProvider router={router} />);
+});
+
+fileStore.addEventListener('openerror', (event) => {
+  root.render(<p>An error occurred: {event.target.error.toString()}</p>)
+})

@@ -1,6 +1,8 @@
+// ProgressBar.jsx
+
 import React from 'react';
 
-export function LoadingBar(props) {
+export function ProgressBar(props) {
   const { bytes, total } = props;
 
   return (

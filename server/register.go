@@ -1,3 +1,5 @@
+// register.go
+
 package main
 
 import (
@@ -46,19 +48,10 @@ func generateDropCode() (string, error) {
 
 // insert a row in the drops table setting the drop code, returning the generated drop id
 func insertDrop(code string) (string, error) {
-	rows, err := db.Query(context.Background(), "INSERT INTO drops(code) VALUES ($1) RETURNING id", code)
-	if err != nil || !rows.Next() {
-		if err == nil {
-			err = fmt.Errorf("query returned zero rows")
-		}
-		return "", err
-	}
+	row := db.QueryRow(context.Background(), "INSERT INTO drops(code) VALUES ($1) RETURNING id", code)
 
 	var id string
-	err = rows.Scan(&id)
-	rows.Close()
-
-	// just to be safe
+	err := row.Scan(&id)
 	if err != nil {
 		return "", err
 	}
@@ -176,6 +169,5 @@ func serveRegister(w http.ResponseWriter, r *http.Request) {
 	s := fmt.Sprintf("{\"drop_code\":\"%s\"}", code)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(s))
-
 	logInfo(r, "registered drop %s (%s)", id, code)
 }

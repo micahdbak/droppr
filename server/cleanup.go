@@ -1,3 +1,5 @@
+// cleanup.go
+
 package main
 
 import (
@@ -9,7 +11,7 @@ import (
 // ----------------------------------------------------------------
 
 func completeDrop(dropId string) error {
-	_, err := db.Query(context.Background(), "UPDATE drops SET is_complete = 't' WHERE id = $1", dropId)
+	_, err := db.Exec(context.Background(), "UPDATE drops SET is_complete = 't' WHERE id = $1", dropId)
 	if err != nil {
 		return err
 	}
