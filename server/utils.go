@@ -11,6 +11,14 @@ import (
 
 // ----------------------------------------------------------------
 
+type File struct {
+	Name string `json:"name"`
+	Size int64  `json:"size"`
+	Type string `json:"type"`
+}
+
+// ----------------------------------------------------------------
+
 // set necessary CORS header(s) in HTTP response
 func setCORS(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
@@ -68,100 +76,37 @@ func logError(r *http.Request, format string, a ...any) {
 
 // ----------------------------------------------------------------
 
-// returns the drop role found with session token and drop id
-func selectDropRoleWithTokenAndId(token string, dropId string) (string, error) {
-	row := db.QueryRow(
-		context.Background(),
-		"SELECT drop_role FROM sessions WHERE token = $1 AND drop_id = $2",
-		token,
-		dropId,
-	)
-
-	var role string
-	err := row.Scan(&role)
+// get the drop ID and drop role from cookies
+func getSessionFromCookies(r *http.Request) (string, string) {
+	// get drop ID from cookies
+	id, err := r.Cookie("drop_id")
 	if err != nil {
-		return "", err
+		return "", ""
 	}
 
-	if role != "dropper" && role != "receiver" {
-		err = fmt.Errorf("\"%s\" is not a valid drop role", role)
-		return "", err
-	}
-
-	return role, nil
-}
-
-// ----------------------------------------------------------------
-
-// a drop is considered busy if a session exists for the dropper and the receiver
-func isDropBusy(dropId string) (bool, error) {
-	row := db.QueryRow(
-		context.Background(),
-		`SELECT 
-			COUNT(CASE WHEN drop_role = 'dropper' THEN 1 END) AS droppers,
-			COUNT(CASE WHEN drop_role = 'receiver' THEN 1 END) AS receivers
-		FROM sessions
-		WHERE drop_id = $1`,
-		dropId,
-	)
-
-	var droppers, receivers int
-	err := row.Scan(&droppers, &receivers)
+	// get drop role from cookies
+	role, err := r.Cookie("drop_role")
 	if err != nil {
-		return false, err
+		return "", ""
 	}
 
-	return droppers != 0 && receivers != 0, nil
-}
-
-// ----------------------------------------------------------------
-
-func selectFiles(dropId string) ([]file, error) {
-	rows, err := db.Query(
-		context.Background(),
-		"SELECT label, name, size, type FROM files WHERE drop_id = $1 ORDER BY name COLLATE \"en_US.UTF-8\" ASC",
-		dropId,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	var files []file
-
-	for rows.Next() {
-		var f file
-		if err = rows.Scan(&f.Label, &f.Name, &f.Size, &f.Type); err == nil {
-			files = append(files, f)
-		} else {
-			break
-		}
-	}
-
-	rows.Close()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return files, nil
+	// return the existing session
+	return id.Value, role.Value
 }
 
 // ----------------------------------------------------------------
 
 // insert a row into sessions with the provided drop ID and role, returning the session token
-func insertSession(dropId string, dropRole string) (string, error) {
-	row := db.QueryRow(
+func insertSession(dropId string, dropRole string) error {
+	_, err := db.Exec(
 		context.Background(),
-		"INSERT INTO sessions(drop_id, drop_role) VALUES ($1, $2) RETURNING token",
+		"INSERT INTO sessions(drop_id, drop_role) VALUES ($1, $2)",
 		dropId,
 		dropRole,
 	)
-
-	var token string
-	err := row.Scan(&token)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return token, nil
+	return nil
 }

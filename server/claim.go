@@ -14,20 +14,25 @@ import (
 // ----------------------------------------------------------------
 
 // select the drop id
-func selectDropIdWithCode(code string) (string, error) {
+func selectDropWithCode(code string) (File, string, error) {
 	row := db.QueryRow(
 		context.Background(),
-		"SELECT id FROM drops WHERE code = $1 AND is_complete = 'f'",
+		"SELECT id, file_name, file_size, file_type FROM drops WHERE code = $1 AND is_complete = 'f'",
 		code,
 	)
 
-	var id string
-	err := row.Scan(&id)
+	var (
+		id       string
+		fileName string
+		fileSize int64
+		fileType string
+	)
+	err := row.Scan(id, fileName, &fileSize, fileType)
 	if err != nil {
-		return "", err
+		return File{"", 0, ""}, "", err
 	}
 
-	return id, nil
+	return File{fileName, fileSize, fileType}, id, nil
 }
 
 // ----------------------------------------------------------------
@@ -38,44 +43,34 @@ func servePeek(w http.ResponseWriter, r *http.Request) {
 
 	// ensure GET request
 	if r.Method != http.MethodGet {
-		writeHTTPError(&w, http.StatusBadRequest)
+		writeHTTPError(&w, http.StatusBadRequest) // 400
 		return
 	}
 
 	// get drop code from request path and check it against a regex
 	code := r.URL.Path[10:] // /api/peek/:code
-	matches, err := regexp.Match("^([a-zA-Z0-9]{6,6})$", []byte(code))
+	matches, err := regexp.Match("^([A-Z0-9]{6,6})$", []byte(code))
 	if err != nil || !matches {
-		writeHTTPError(&w, http.StatusBadRequest)
+		writeHTTPError(&w, http.StatusBadRequest) // 400
 		return
 	}
 
-	// get drop ID with code; err will fire if the drop code is not for an incomplete drop
-	id, err := selectDropIdWithCode(code)
+	file, _, err := selectDropWithCode(code)
 	if err != nil {
-		logWarning(r, "%v", err)
-		writeHTTPError(&w, http.StatusNotFound)
-		return
-	}
-
-	// get files for this drop
-	files, err := selectFiles(id)
-	if err != nil {
-		logError(r, "%v", err)
-		writeHTTPError(&w, http.StatusNotFound)
+		writeHTTPError(&w, http.StatusNotFound) // 404
 		return
 	}
 
 	// convert files array to JSON byte array
-	files_json, err := json.Marshal(files)
+	file_json, err := json.Marshal(file)
 	if err != nil {
 		logError(r, "%v", err)
-		writeHTTPError(&w, http.StatusInternalServerError)
+		writeHTTPError(&w, http.StatusInternalServerError) // 500
 		return
 	}
 
 	// provide file info to requester
-	s := fmt.Sprintf("{\"fileinfo\":%s}", files_json)
+	s := fmt.Sprintf("{\"fileinfo\":%s}", file_json)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(s))
 }
@@ -88,86 +83,52 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 
 	// ensure POST request
 	if r.Method != http.MethodPost {
-		writeHTTPError(&w, http.StatusBadRequest)
+		writeHTTPError(&w, http.StatusBadRequest) // 400
 		return
 	}
 
 	// get drop code from request path and check it against a regex
 	code := r.URL.Path[11:] // /api/claim/:code
-	matches, err := regexp.Match("^([a-zA-Z0-9]{6,6})$", []byte(code))
+	matches, err := regexp.Match("^([A-Z0-9]{6,6})$", []byte(code))
 	if err != nil || !matches {
-		writeHTTPError(&w, http.StatusBadRequest)
+		writeHTTPError(&w, http.StatusBadRequest) // 400
 		return
 	}
 
-	// get drop ID with code; err will fire if the drop code is not for an incomplete drop
-	id, err := selectDropIdWithCode(code)
+	// get file information and drop ID given the drop code
+	// will error if no incomplete drop exists for the code given
+	file, id, err := selectDropWithCode(code)
 	if err != nil {
-		logWarning(r, "%v", err)
-		writeHTTPError(&w, http.StatusBadRequest)
+		writeHTTPError(&w, http.StatusNotFound) // 404
 		return
 	}
 
-	// check for an existing session for this drop in cookies
-	token, id_ := getSession(r)
-	if len(token) > 0 && len(id_) > 0 {
-		if id == id_ {
-			if role, err := selectDropRoleWithTokenAndId(token, id); err == nil {
-				// the requester has already claimed this drop, so pretend they just claimed it
-				if role == "receiver" {
-					files, err := selectFiles(id)
-					if err != nil {
-						logError(r, "%v", err)
-						writeHTTPError(&w, http.StatusInternalServerError)
-						return
-					}
-
-					// convert files array to JSON byte array
-					files_json, err := json.Marshal(files)
-					if err != nil {
-						logError(r, "%v", err)
-						writeHTTPError(&w, http.StatusInternalServerError)
-						return
-					}
-
-					// provide file info to requester
-					s := fmt.Sprintf("{\"fileinfo\":%s}", files_json)
-					w.Header().Set("Content-Type", "application/json")
-					w.Write([]byte(s))
-					return
-				} else {
-					http.Error(w, "You cannot receive your own drop", http.StatusBadRequest)
-					return
-				}
-			}
-		}
+	// prepare fileinfo response data
+	file_json, err := json.Marshal(file)
+	if err != nil {
+		logError(r, "%v", err)
+		writeHTTPError(&w, http.StatusInternalServerError) // 500
+		return
 	}
+	file_s := fmt.Sprintf("{\"fileinfo\":%s}", file_json)
 
-	// check if the drop is busy (someone already claimed it)
-	if isBusy, err := isDropBusy(id); err != nil || isBusy {
-		if err != nil {
-			logError(r, "%v", err)
-		}
-		writeHTTPError(&w, http.StatusConflict)
+	// double check that the requester hasn't claimed this drop already
+	id_, role := getSessionFromCookies(r)
+	if id == id_ && role == "receiver" {
+		// if yes, just provide file info to requester and move on
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(file_s))
 		return
 	}
 
 	// insert new session for the request
-	token, err = insertSession(id, "receiver")
+	err = insertSession(id, "receiver")
 	if err != nil {
+		// someone claimed the request already; pretend it doesn't exist
 		logError(r, "%v", err)
-		writeHTTPError(&w, http.StatusInternalServerError)
+		writeHTTPError(&w, http.StatusNotFound) // 404
 		return
 	}
-
-	// set the session_token cookie
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_token",
-		Value:    token,
-		Path:     "/",
-		Expires:  time.Now().Add(24 * time.Hour), // expires in 24 hours
-		HttpOnly: true,                           // don't let JS see session_token
-	})
 
 	// set the drop_id cookie
 	http.SetCookie(w, &http.Cookie{
@@ -178,26 +139,17 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,                           // let JS see drop_id
 	})
 
-	// get files for this drop
-	files, err := selectFiles(id)
-	if err != nil {
-		logError(r, "%v", err)
-		writeHTTPError(&w, http.StatusInternalServerError)
-		return
-	}
-
-	// convert files array to JSON byte array
-	files_json, err := json.Marshal(files)
-	if err != nil {
-		logError(r, "%v", err)
-		writeHTTPError(&w, http.StatusInternalServerError)
-		return
-	}
+	// set the drop_id cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "drop_role",
+		Value:    "receiver",
+		Path:     "/",
+		Expires:  time.Now().Add(24 * time.Hour), // expires in 24 hours
+		HttpOnly: true,                           // let JS see drop_id
+	})
 
 	// provide file info to requester
-	s := fmt.Sprintf("{\"fileinfo\":%s}", files_json)
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(s))
-
+	w.Write([]byte(file_s))
 	logInfo(r, "claimed drop %s", id)
 }

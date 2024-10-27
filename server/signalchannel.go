@@ -84,55 +84,15 @@ var (
 
 // ----------------------------------------------------------------
 
-// get the session token and drop ID from cookies
-func getSession(r *http.Request) (string, string) {
-	// get session token from cookies
-	token, err := r.Cookie("session_token")
-	if err != nil {
-		return "", ""
-	}
-
-	// get drop ID from cookies
-	id, err := r.Cookie("drop_id")
-	if err != nil {
-		return "", ""
-	}
-
-	// return the existing session
-	return token.Value, id.Value
-}
-
-// ----------------------------------------------------------------
-
-// authorizes an incoming request (authorized when bool == true) returning the session token, drop ID, and role
-func authorizeSignalChannelRequest(r *http.Request) (string, string, string, error) {
-	token, id := getSession(r)
-	if len(token) == 0 || len(id) == 0 {
-		err := fmt.Errorf("invalid session")
-		return "", "", "", err
-	}
-
-	role, err := selectDropRoleWithTokenAndId(token, id)
-	if err != nil {
-		return "", "", "", err
-	}
-
-	// authorized session; return values
-	return token, id, role, nil
-}
-
-// ----------------------------------------------------------------
-
 // Upgrades an authorized request to a signal channel (WebSocket connection)
 func serveSignalChannel(w http.ResponseWriter, r *http.Request) {
 	setCORS(&w)
 
-	_, id, role, err := authorizeSignalChannelRequest(r)
-	if err != nil {
-		logError(r, "%v", err)
-		http.Error(w,
-			http.StatusText(http.StatusUnauthorized),
-			http.StatusUnauthorized)
+	// get drop ID and role from cookies
+	id, role := getSessionFromCookies(r)
+	if len(id) == 0 || len(role) == 0 {
+		logWarning(r, "%v", fmt.Errorf("invalid session"))
+		writeHTTPError(&w, http.StatusUnauthorized)
 		return
 	}
 
@@ -183,6 +143,7 @@ func serveSignalChannel(w http.ResponseWriter, r *http.Request) {
 
 		// bounce message back as failed if an error occurred
 		if err != nil {
+			logWarning(r, "%v", err)
 			failedMsg := fmt.Sprintf("{\"status\":\"failed\",\"data\":%s}", msg)
 			conn.WriteMessage(ws.TextMessage, []byte(failedMsg))
 		}

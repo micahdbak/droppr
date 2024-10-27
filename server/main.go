@@ -22,6 +22,7 @@ func init() {
 func main() {
 	logPlain("~~ droppr server ~~")
 
+	// connect to database
 	var err error
 	db, err = pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
@@ -29,14 +30,13 @@ func main() {
 	}
 	defer db.Close()
 
+	// do a test query to make sure the db connection is live and good
 	row := db.QueryRow(context.Background(), "SELECT 'Hello from postgres!'::text AS text")
-
 	var dbText string
 	err = row.Scan(&dbText)
 	if err != nil {
 		panic(fmt.Sprintf("%v", err))
 	}
-
 	logPlain("%s", dbText)
 
 	http.HandleFunc("/api/register", serveRegister)
