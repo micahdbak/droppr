@@ -133,9 +133,13 @@ func serveSignalChannel(w http.ResponseWriter, r *http.Request) {
 
 		// attempt to send message to peer
 		if role == "dropper" && sc.Receiver != nil {
-			err = sc.Receiver.WriteMessage(t, msg)
+			if err = sc.Receiver.WriteMessage(t, msg); err != nil {
+				logWarning(r, "%v", err)
+			}
 		} else if role == "receiver" && sc.Dropper != nil {
-			err = sc.Dropper.WriteMessage(t, msg)
+			if err = sc.Dropper.WriteMessage(t, msg); err != nil {
+				logWarning(r, "%v", err)
+			}
 		} else {
 			// peer isn't connected, fail the message
 			err = fmt.Errorf("peer not connected")
@@ -143,7 +147,6 @@ func serveSignalChannel(w http.ResponseWriter, r *http.Request) {
 
 		// bounce message back as failed if an error occurred
 		if err != nil {
-			logWarning(r, "%v", err)
 			failedMsg := fmt.Sprintf("{\"status\":\"failed\",\"data\":%s}", msg)
 			conn.WriteMessage(ws.TextMessage, []byte(failedMsg))
 		}

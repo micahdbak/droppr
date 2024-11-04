@@ -9,7 +9,11 @@ import { AppWindow, Page, Header } from './components';
 import { bytesToHRString } from './core';
 
 export function ReceiverConfirm(props) {
-  const [fileinfo, setFileinfo] = useState(null);
+  const [file, setFile] = useState({
+    name: 'tmp.bin',
+    size: 0,
+    type: 'application/octet-stream'
+  });
   const { code, onConfirm } = props;
 
   const onGoBack = () => {
@@ -18,28 +22,21 @@ export function ReceiverConfirm(props) {
   };
 
   useEffect(() => {
-    const peekFileinfo = async () => {
+    const peekFile = async () => {
       try {
         const res = await axios.get("/api/peek/" + code.toUpperCase());
-        setFileinfo(res.data.fileinfo);
+        setFile(res.data.file);
       } catch (err) {
-        sessionStorage.setItem('error', err.toString())
-        window.location.href = window.location.origin + "/#error";
-        window.location.reload();
+        console.log(err.toString());
+        
+        //sessionStorage.setItem('error', err.toString());
+        //window.location.href = window.location.origin + "/#error";
+        //window.location.reload();
       }
     };
 
-    peekFileinfo();
-  });
-
-  let numFiles = 0, totalSize = 0;
-
-  if (fileinfo !== null) {
-    numFiles = fileinfo.length;
-    fileinfo.forEach(file => {
-      totalSize += file.size;
-    });
-  }
+    peekFile();
+  }, []);
   
   return (
     <Page>
@@ -49,11 +46,10 @@ export function ReceiverConfirm(props) {
           <div className="flex flex-col items-start">
             <p className="text-lg">The drop code is:</p>
             <p className="text-6xl font-mono bg-gray-200 px-2 rounded-lg">{code.toUpperCase()}</p>
-            {fileinfo !== null ? (
-              <p className="text-xs text-gray-500">{numFiles} {numFiles === 1 ? "file" : "files"}, {bytesToHRString(totalSize)}.</p>
-            ) : []}
+            <p className="text-xs text-gray-500">{file.name}, {bytesToHRString(file.size)}.</p>
             <div className="flex flex-row gap-1 mt-4">
               <button
+                type="button"
                 className="bg-gray-700 hover:bg-gray-500 text-white px-4 py-2 rounded-lg"
                 onClick={onConfirm}
               >

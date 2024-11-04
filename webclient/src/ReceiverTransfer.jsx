@@ -8,16 +8,15 @@ import { Page, Header, AppWindow, ProgressBar } from './components';
 import { bytesToHRString } from './core';
 
 export function ReceiverTransfer(props) {
-  const { bytesReceived, totalSize, numFiles, remainingSeconds } = props;
+  const { bytesReceived, totalSize, fileName, remainingSeconds } = props;
   
   const percentTransferred = (100 * bytesReceived / totalSize).toFixed(1);
-  const titleText = `Receiving ${numFiles} ${numFiles > 1 ? "files" : "file"}...`;
 
   return (
     <Page>
       <Header />
       <div className="flex flex-col gap-2 justify-center align-center">
-        <AppWindow titleText={titleText} imgSrc="drop.gif">
+        <AppWindow titleText={`Receiving ${fileName}...`} imgSrc="drop.gif">
           <div className="flex flex-col items-start">
             <p className="text-base">{percentTransferred}% done</p>
             <ProgressBar bytes={bytesReceived} total={totalSize} />

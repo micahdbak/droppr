@@ -9,21 +9,29 @@ import { ReceiverConfirm } from './ReceiverConfirm.jsx';
 import { ReceiverProcessing } from './ReceiverProcessing.jsx';
 import { ReceiverTransfer } from './ReceiverTransfer.jsx';
 
-const STATE_CONFIRM = 'confirm';
-const STATE_CONNECTING = 'connecting';
-const STATE_RECEIVING = 'receiving';
-const STATE_PROCESSING = 'processing';
+const STATE_CONFIRM    = 'confirm';    // ReceiverConfirm.jsx
+const STATE_CONNECTING = 'connecting'; // <></>
+const STATE_RECEIVING  = 'receiving';  // ReceiverTransfer.jsx
+const STATE_PROCESSING = 'processing'; // ReceiverProcessing.jsx (isCleanUp="false")
+const STATE_CLEANUP    = 'cleanup';    // ReceiverProcessing.jsx (isCleanUp="true")
 
 export function ReceiverContainer() {
   // before transfer
   const [state, setState] = useState(STATE_CONFIRM);
 
   // during transfer
-  const [fileinfo, setFileinfo] = useState([]);
-  const [totalSize, setTotalSize] = useState(1);
+  const [file, setFile] = useState({
+    name: 'tmp.bin',
+    size: 0,
+    type: 'application/octet-stream',
+    href: ''
+  }); // fake file info
   const [bytesReceived, setBytesReceived] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // during processing
+  const [processingProgress, setProcessingProgress] = useState(0);
 
   const { code } = useParams(); // code is in URL fragment
 
@@ -49,21 +57,24 @@ export function ReceiverContainer() {
 
         // will throw an error if the drop was not able to be claimed
         const res = await axios.post("/api/claim/" + code.toUpperCase());
-        setFileinfo(res.data.fileinfo);
+        const _file = res.data.file;
+        setFile(_file);
 
-        // calculate total size
-        let _totalSize = 0;
-        res.data.fileinfo.forEach(file => {
-          _totalSize += file.size;
-        });
-        setTotalSize(_totalSize);
+        // will be used by ReceiverSuccess.jsx
+        sessionStorage.setItem('totalSize', _file.size);
+        sessionStorage.setItem('fileName', _file.name);
 
-        // will be used by ReceiverDownload.jsx
-        sessionStorage.setItem('totalSize', JSON.stringify(_totalSize));
+        let receiver;
 
-        // this is initialized before root.render(...) in index.js
-        const fileStore = window.___DROPPR___.fileStore;
-        const receiver = new Receiver(res.data.fileinfo, fileStore);
+        try {
+          receiver = new Receiver(_file); // will prompt for a file save location
+        } catch (err) {
+          // go to ShowError.jsx
+          sessionStorage.setItem('error', 'Error in Receiver: ' + err.toString());
+          window.location.href = window.location.origin + "/#error";
+          window.location.reload();
+          return;
+        }
         window.___DROPPR___.receiver = receiver;
         let checkReceiverInterval = null;
 
@@ -73,54 +84,75 @@ export function ReceiverContainer() {
           const startTime = Date.now(); // for checkReceiverInterval
 
           checkReceiverInterval = setInterval(() => {
-            const _bytesReceived = receiver.bytesReceived;
+            setState((_state) => {
+              if (_state === STATE_PROCESSING || _state === STATE_CLEANUP) {
+                setProcessingProgress(receiver.processingProgress);
+              } else {
+                const _bytesReceived = receiver.bytesReceived;
+  
+                // calculate remaining seconds
+                const _elapsedSeconds = (Date.now() - startTime) / 1000;
+                const averageSPB = _elapsedSeconds / _bytesReceived; // SPB = seconds per byte
+                const _remainingSeconds = (_file.size - _bytesReceived) * averageSPB;
+  
+                setBytesReceived(_bytesReceived);
+                setRemainingSeconds(Math.round(_remainingSeconds));
+                setElapsedSeconds(_elapsedSeconds); // for ReceiverProcessing.jsx
+                
+                // for Success.jsx
+                sessionStorage.setItem('elapsedSeconds', _elapsedSeconds);
+              }
 
-            // calculate remaining seconds
-            const _elapsedSeconds = (Date.now() - startTime) / 1000;
-            const averageSPB = _elapsedSeconds / _bytesReceived; // SPB = seconds per byte
-            const _remainingSeconds = (_totalSize - _bytesReceived) * averageSPB;
-
-            setBytesReceived(_bytesReceived);
-            setRemainingSeconds(Math.round(_remainingSeconds));
-            setElapsedSeconds(_elapsedSeconds); // for ReceiverProcessing.jsx
-
-            // for ReceiverDownload.jsx
-            sessionStorage.setItem('elapsedSeconds', _elapsedSeconds);
+              return _state;
+            });
           }, 250); // 250ms
         });
 
         // the connection was broken, but the receiver will attempt to reconnect
         receiver.addEventListener('disconnected', () => {
           // display <></> until connected
+          clearInterval(checkReceiverInterval);
           setState(STATE_CONNECTING);
         });
 
         // the connection has failed and will not attempt to reconnect
-        receiver.addEventListener('failed', () => {
+        receiver.addEventListener('aborted', (event) => {
           // go to ShowError.jsx
-          sessionStorage.setItem('error', 'Something broke.');
+          sessionStorage.setItem('error', event.target.error.toString());
           window.location.href = window.location.origin + "/#error";
           window.location.reload();
         });
 
-        // all files have been downloaded and the receiver is now preparing the download information
+        // for non-Chromium-based browsers (uses IndexedDB)
         receiver.addEventListener('processing', async () => {
-          setState(STATE_PROCESSING); // show ReceiverProcessing.jsx
-          clearInterval(checkReceiverInterval); // stop checking the receiver
+          // show ReceiverProcessing.jsx (isCleanUp="false")
+          setState(STATE_PROCESSING);
         });
 
-        receiver.addEventListener('done', async () => {
-          const download = JSON.stringify(receiver.downloaded);
-          sessionStorage.setItem('download', download); // for ReceiverDownload.jsx
+        // for non-Chromium-based browsers (uses IndexedDB)
+        receiver.addEventListener('cleanup', async () => {
+          // show ReceiverProcessing.jsx (isCleanUp="true")
+          setState(STATE_CLEANUP);
+        });
 
-          // go to ReceiverDownload.jsx
+        // download is complete, display summary
+        receiver.addEventListener('done', async () => {
+          // go to Success.jsx
+          clearInterval(checkReceiverInterval);
+          
+          receiver.close();
+          receiver = null;
+          delete window.___DROPPR___.receiver;
+
           await axios.post('/api/cleanup');
-          window.location.href = window.location.origin + "/#download";
+          
+          sessionStorage.setItem('isDropper', 'false');
+          window.location.href = window.location.origin + "/#success";
           window.location.reload();
         });
       } catch (err) {
         // go to ShowError.jsx
-        sessionStorage.setItem('error', err.toString())
+        sessionStorage.setItem('error', err.toString());
         window.location.href = window.location.origin + "/#error";
         window.location.reload();
       }
@@ -135,17 +167,25 @@ export function ReceiverContainer() {
     return <></>; // blank screen
   }
 
-  if (state === STATE_PROCESSING) {
-    return <ReceiverProcessing elapsedSeconds={elapsedSeconds} totalSize={totalSize} />;
+  if (state === STATE_PROCESSING || state === STATE_CLEANUP) {
+    return (
+      <ReceiverProcessing
+        isCleanUp={state === STATE_CLEANUP}
+        progress={processingProgress}
+        fileName={file.name}
+        elapsedSeconds={elapsedSeconds}
+        totalSize={file.size}
+      />
+    );
   }
 
   // assume state === STATE_RECEIVING
 
   return (
     <ReceiverTransfer
-      numFiles={fileinfo.length}
+      fileName={file.name}
       bytesReceived={bytesReceived}
-      totalSize={totalSize}
+      totalSize={file.size}
       remainingSeconds={remainingSeconds}
     />
   );

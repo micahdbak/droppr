@@ -12,29 +12,21 @@ const STATE_CONNECTING = 'connecting';
 const STATE_SENDING = 'sending';
 
 export function DropperContainer(props) {
-  const { files, labels, code } = props;
+  const { file, code } = props;
 
   const [state, setState] = useState(STATE_WAITING);
-  const [totalSize, setTotalSize] = useState(1);
   const [bytesSent, setBytesSent] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
 
   useEffect(() => {
     // run exactly once on execution of JS within this component
     if (window.___DROPPR___.dropper === null) {
-      // calculate total size
-      let _totalSize = 0;
-      files.forEach(file => {
-        _totalSize += file.size;
-      });
-      setTotalSize(_totalSize);
-
       // will be used by DropperSuccess.jsx
-      sessionStorage.setItem('totalSize', JSON.stringify(_totalSize));
-      sessionStorage.setItem('numFiles', files.length);
+      sessionStorage.setItem('totalSize', file.size.toString());
+      sessionStorage.setItem('fileName', file.name);
 
-      // create a new dropper object
-      const dropper = new Dropper(files, labels);
+      // create a new Dropper object
+      const dropper = new Dropper(file);
       window.___DROPPR___.dropper = dropper;
       let checkDropperInterval = null;
 
@@ -50,7 +42,7 @@ export function DropperContainer(props) {
           // calculate remaining seconds
           const elapsedSeconds = (Date.now() - startTime) / 1000;
           const averageSPB = elapsedSeconds / _bytesSent; // SPB = seconds per byte
-          const _remainingSeconds = (_totalSize - _bytesSent) * averageSPB;
+          const _remainingSeconds = (file.size - _bytesSent) * averageSPB;
   
           setBytesSent(_bytesSent);
           setRemainingSeconds(Math.round(_remainingSeconds));
@@ -66,9 +58,9 @@ export function DropperContainer(props) {
       });
 
       // the connection has failed and cannot be recovered
-      dropper.addEventListener('failed', () => {
+      dropper.addEventListener('failed', (event) => {
         // go to ShowError.jsx
-        sessionStorage.setItem('error', 'Something broke.');
+        sessionStorage.setItem('error', event.target.error.toString());
         window.location.href = window.location.origin + "/#error";
         window.location.reload();
       });
@@ -79,7 +71,8 @@ export function DropperContainer(props) {
         clearInterval(checkDropperInterval); // abundance of whatnot
         await axios.post('/api/cleanup'); // deletes cookies
 
-        // go to DropperSuccess.jsx
+        // go to Success.jsx
+        sessionStorage.setItem('isDropper', 'true');
         window.location.href = window.location.origin + "/#success";
         window.location.reload();
       });
@@ -87,7 +80,7 @@ export function DropperContainer(props) {
   }, []);
 
   if (state === STATE_WAITING) {
-    return <DropperWaiting code={code} totalSize={totalSize} numFiles={files.length} />;
+    return <DropperWaiting code={code} fileName={file.name} totalSize={file.size} />;
   }
 
   if (state === STATE_CONNECTING) {
@@ -98,10 +91,10 @@ export function DropperContainer(props) {
 
   return (
     <DropperTransfer
-      numFiles={files.length}
       bytesSent={bytesSent}
-      totalSize={totalSize}
+      fileName={file.name}
       remainingSeconds={remainingSeconds}
+      totalSize={file.size}
     />
   );
 }

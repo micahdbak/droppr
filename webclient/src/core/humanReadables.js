@@ -12,3 +12,25 @@ export function bytesToHRString(bytes) {
 
   return `${bytes.toFixed(1)} ${units[unit]}`;
 }
+
+// return a human readable string for a number of seconds, e.g., 1s, 5m 17s, 3h 15m, ... 
+export function secondsToHRString(seconds) {
+  let minutes = Math.floor(seconds / 60);
+  seconds %= 60;
+  let hours = Math.floor(minutes / 60);
+  minutes %= 60;
+  
+  const str = [];
+
+  if (hours > 0) {
+    // if took hours, only mention hours and minutes (ignore seconds)
+    str.push(`${hours}h`);
+    if (minutes > 0) str.push(`${minutes}m`);
+  } else {
+    // if took less than an hour, mention minutes, seconds, or minutes and seconds
+    if (minutes > 0) str.push(`${minutes}m`);
+    if (seconds > 0) str.push(`${seconds}s`);
+  }
+
+  return str.join(" ");
+}

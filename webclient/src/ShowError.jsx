@@ -7,7 +7,7 @@ import { faFaceDizzy } from '@fortawesome/free-solid-svg-icons';
 import { Page, Header } from './components';
 
 export function ShowError() {
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     setError(sessionStorage.getItem('error'));

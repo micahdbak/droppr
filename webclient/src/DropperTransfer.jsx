@@ -8,9 +8,9 @@ import { Header, ProgressBar, AppWindow, Page } from './components';
 import { bytesToHRString } from './core';
 
 export function DropperTransfer(props) {
-  const { numFiles, bytesSent, totalSize, remainingSeconds } = props;
+  const { fileName, bytesSent, totalSize, remainingSeconds } = props;
   
-  const titleText = `Dropping ${numFiles} ${numFiles > 1 ? "files" : "file"}...`;
+  const titleText = `Dropping ${fileName}...`;
   const percentTransferred = (100 * bytesSent / totalSize).toFixed(1);
 
   return (

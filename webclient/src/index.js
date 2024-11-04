@@ -10,9 +10,8 @@ import {
 import { FileStore } from './core/index.js';
 import { About } from './About.jsx';
 import { Main } from './Main.jsx';
-import { DropperSuccess } from './DropperSuccess.jsx';
+import { Success } from './Success.jsx';
 import { ReceiverContainer } from './ReceiverContainer.jsx';
-import { ReceiverDownload } from './ReceiverDownload.jsx';
 import { ShowError } from './ShowError.jsx';
 
 const router = createHashRouter([
@@ -26,11 +25,7 @@ const router = createHashRouter([
   },
   {
     path: "/success",
-    element: <DropperSuccess />
-  },
-  {
-    path: "/download",
-    element: <ReceiverDownload />
+    element: <Success />
   },
   {
     path: "/about",
@@ -42,19 +37,48 @@ const router = createHashRouter([
   }
 ]);
 
-const fileStore = new FileStore();
-window.___DROPPR___ = {
-  fileStore: fileStore,
-  dropper: null,
-  receiver: null
-};
-
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
-fileStore.addEventListener('open', () => {
-  root.render(<RouterProvider router={router} />);
-});
+// check if File System Access API is available (Chromium browsers)
+if (window.showSaveFilePicker) {
+  window.___DROPPR___ = {
+    dropper: null,
+    receiver: null,
+    fileStore: null // don't use IndexedDB
+  };
+  root.render(<RouterProvider router={router} />); // start droppr
+} else {
+  // non-Chromium browsers, e.g., FireFox, Safari, etc.
+  try {
+    window.___DROPPR___ = {
+      dropper: null,
+      receiver: null,
+      fileStore: new FileStore()
+    };
+    root.render(<p>Just a moment...</p>);
 
-fileStore.addEventListener('openerror', (event) => {
-  root.render(<p>An error occurred: {event.target.error.toString()}</p>)
-})
+    // connection to IndexedDB successful
+    window.___DROPPR___.fileStore.addEventListener('open', async () => {
+      await window.___DROPPR___.fileStore.clear((progress) => {
+        console.log("Cleaning up... " + `${progress}%`);
+      });
+      root.render(<RouterProvider router={router} />); // start droppr
+    });
+
+    // connection to IndexedDB not successful
+    window.___DROPPR___.fileStore.addEventListener('openerror', (event) => {
+      console.log('Error in index.js: ' + event.target.error.toString());
+      window.___DROPPR___.fileStore = null; // can't receive files, but can *try* drop
+      root.render(<RouterProvider router={router} />); // start droppr
+    });
+  } catch (err) {
+    console.log('Error in index.js: ' + err.toString());
+    // reset window.___DROPPR___ incase error thrown from that
+    window.___DROPPR___ = {
+      dropper: null,
+      receiver: null,
+      fileStore: null // can't receive files, but can *try* to drop
+    };
+    root.render(<RouterProvider router={router} />); // start droppr
+  }
+}

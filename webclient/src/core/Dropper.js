@@ -1,14 +1,15 @@
 // Dropper.js
 
 import { Peer } from './Peer.js';
-import { FileStream } from './FileStream.js';
+
+const _messageSize = parseInt(process.env.REACT_APP_MESSAGE_SIZE, 10);
 
 /* Dropper - send files
  *
  * public methods:
  *
- * constructor(files, labels) - start a drop for files
- * close()                    - Close connection
+ * constructor(file) - start a drop for the provided file
+ * close()           - Close connection
  *
  * public fields:
  *
@@ -24,13 +25,22 @@ import { FileStream } from './FileStream.js';
 export class Dropper extends EventTarget {
   // private fields
 
-  _peer; // the peer connection
-  _fileStreams = []; // open file streams
+  _peer = null; // the peer connection
+  _dataChannel = null; // the data channel
+  _state = 'send'; // the current state
+
+  // public fields
+
+  file = null; // the file being sent
+  bytesSent = 0;
+  error = new Error("huh?");
 
   // constructor
 
-  constructor(files, labels) {
+  constructor(file) {
     super();
+
+    this.file = file;
 
     // start waiting for peer connection
     this._peer = new Peer(true);
@@ -41,46 +51,57 @@ export class Dropper extends EventTarget {
       this.dispatchEvent(new Event('disconnected'));
     });
 
-    // start file streams (data channels) for each file
-    for (let i = 0; i < files.length; i++) {
-      const fileStream = new FileStream(this._peer, files[i], labels[i]);
-      this._fileStreams.push(fileStream);
-    }
-
-    // watch file streams
-    this._awaitFileStreams();
+    // create data channel to stream the file
+    this._dataChannel = this._peer.createDataChannel('filestream');
+    this._dataChannel.addEventListener('open', this._sendMessage.bind(this));
+    this._dataChannel.addEventListener('bufferedamountlow', this._sendMessage.bind(this));
   }
 
   // private methods
 
-  async _awaitFileStreams() {
+  async _sendMessage() {
     try {
-      // create a promise for each stream that resolves when each file is sent
-      const promises = this._fileStreams.map((fileStream) => {
-        return new Promise((resolve, reject) => {
-          fileStream.addEventListener('done', resolve);
-        });
-      });
+      if (this._state === 'send') {
+        // check if done sending file
+        if (this.bytesSent >= this.file.size) {
+          this._dataChannel.send('done'); // send done message
 
-      await Promise.all(promises);
-      this.dispatchEvent(new Event('done'));
-      this.close();
+          // set state to done
+          this._state = 'done';
+          this.dispatchEvent(new Event('done'));
+
+          // close peer connection
+          this.close();
+          return;
+        }
+
+        // slice the file given the current position
+        let end = Math.min(this.bytesSent + _messageSize, this.file.size);
+        let blob = this.file.slice(this.bytesSent, end);
+
+        // update the current position
+        this.bytesSent = end;
+
+        // get buffer and send it through the data channel
+        // NOTE: this._dataChannel will dispatch bufferedamountlow when done
+        this._state = 'sending'; // incase an event follows the 'await' below, don't send
+        let buffer = await blob.arrayBuffer();
+        this._state = 'send'; // next event should send
+        
+        // queue the message
+        this._dataChannel.send(buffer);
+
+        // take out the trash
+        buffer = null;
+        blob = null;
+      } else {
+        console.log(
+          `Dropper: Passing state '${this._state}' in _sendMessage.`
+        );
+      }
     } catch (err) {
-      console.log(`Dropper: Error in _awaitFileStreams: ${err.toString()}`);
-      this.dispatchEvent(new Event('failed'));
+      console.log(`Dropper: Error in _sendMessage: ${err.toString()}`);
     }
-  }
-
-  // getters
-
-  get bytesSent() {
-    let bytesSent = 0;
-
-    for (let i = 0; i < this._fileStreams.length; i++) {
-      bytesSent += this._fileStreams[i].offset;
-    }
-
-    return bytesSent;
   }
 
   // public methods

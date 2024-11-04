@@ -27,7 +27,7 @@ func selectDropWithCode(code string) (File, string, error) {
 		fileSize int64
 		fileType string
 	)
-	err := row.Scan(id, fileName, &fileSize, fileType)
+	err := row.Scan(&id, &fileName, &fileSize, &fileType)
 	if err != nil {
 		return File{"", 0, ""}, "", err
 	}
@@ -57,11 +57,12 @@ func servePeek(w http.ResponseWriter, r *http.Request) {
 
 	file, _, err := selectDropWithCode(code)
 	if err != nil {
+		logWarning(r, "%v", err)
 		writeHTTPError(&w, http.StatusNotFound) // 404
 		return
 	}
 
-	// convert files array to JSON byte array
+	// convert file to JSON byte array
 	file_json, err := json.Marshal(file)
 	if err != nil {
 		logError(r, "%v", err)
@@ -70,7 +71,7 @@ func servePeek(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// provide file info to requester
-	s := fmt.Sprintf("{\"fileinfo\":%s}", file_json)
+	s := fmt.Sprintf("{\"file\":%s}", file_json)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(s))
 }
@@ -99,18 +100,19 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 	// will error if no incomplete drop exists for the code given
 	file, id, err := selectDropWithCode(code)
 	if err != nil {
+		logError(r, "%v", err)
 		writeHTTPError(&w, http.StatusNotFound) // 404
 		return
 	}
 
-	// prepare fileinfo response data
+	// prepare file info response data
 	file_json, err := json.Marshal(file)
 	if err != nil {
 		logError(r, "%v", err)
 		writeHTTPError(&w, http.StatusInternalServerError) // 500
 		return
 	}
-	file_s := fmt.Sprintf("{\"fileinfo\":%s}", file_json)
+	file_s := fmt.Sprintf("{\"file\":%s}", file_json)
 
 	// double check that the requester hasn't claimed this drop already
 	id_, role := getSessionFromCookies(r)
@@ -125,7 +127,7 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 	err = insertSession(id, "receiver")
 	if err != nil {
 		// someone claimed the request already; pretend it doesn't exist
-		logError(r, "%v", err)
+		logWarning(r, "%v", err)
 		writeHTTPError(&w, http.StatusNotFound) // 404
 		return
 	}
