@@ -1,14 +1,20 @@
 // DropperWaiting.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faCheck, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 
 import { Page, Header, AppWindow } from './components';
-import { bytesToHRString } from './core';
+import { bytesToString } from './core';
 
+/**
+ * @param {object} props
+ * @param {string} props.code
+ * @param {string} props.fileName
+ * @param {number} props.totalSize
+ */
 export function DropperWaiting(props) {
-  const { code, totalSize, fileName } = props;
+  const { code, fileName, totalSize } = props;
 
   const [downloadLinkCopied, setDownloadLinkCopied] = useState(false);
 
@@ -36,7 +42,7 @@ export function DropperWaiting(props) {
           <div className="flex flex-col items-start">
             <p className="text-lg">Your drop code is:</p>
             <p className="text-6xl font-mono bg-gray-200 px-2 rounded-lg">{code}</p>
-            <p className="text-xs mb-4 text-gray-500">{fileName}, {bytesToHRString(totalSize)}.</p>
+            <p className="text-xs mb-4 text-gray-500">{fileName}, {bytesToString(totalSize)}.</p>
             <p className="text-xs">Download link:</p>
             <div className="flex flex-row gap-2 mb-4">
               <input

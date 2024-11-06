@@ -1,7 +1,12 @@
 // humanReadables.js
 
-// return a human readable string for a number of bytes, e.g., 1 B, 5.3 kB, 17 MB, 12 GB, ...
-export function bytesToHRString(bytes) {
+
+
+/**
+ * return a human readable string for a number of bytes, e.g., 1 B, 5.3 kB, 17 MB, 12 GB, ...
+ * @param {number} bytes
+ */
+export function bytesToString(bytes) {
   const units = ['B', 'kB', 'MB', 'GB', 'TB']; // I swear if someone sends a TB of data
   let unit = 0;
   
@@ -13,8 +18,13 @@ export function bytesToHRString(bytes) {
   return `${bytes.toFixed(1)} ${units[unit]}`;
 }
 
-// return a human readable string for a number of seconds, e.g., 1s, 5m 17s, 3h 15m, ... 
-export function secondsToHRString(seconds) {
+
+
+/**
+ * return a human readable string for a number of seconds, e.g., 1s, 5m 17s, 3h 15m, ...
+ * @param {number} seconds
+ */
+export function secondsToString(seconds) {
   let minutes = Math.floor(seconds / 60);
   seconds %= 60;
   let hours = Math.floor(minutes / 60);
@@ -33,4 +43,21 @@ export function secondsToHRString(seconds) {
   }
 
   return str.join(" ");
+}
+
+
+
+/**
+ * @param {Error} error
+ */
+export function errorToString(error) {
+  let str = error.toString() + '\n\n';
+  let currentError = error;
+
+  while (currentError) {
+    str += currentError.stack.trim() + '\n\n';
+    currentError = currentError.cause;
+  }
+
+  return str;
 }

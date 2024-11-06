@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import * as uuid from 'uuid';
 
 import { AppWindow, Page, Header } from './components';
 import { DropperContainer } from './DropperContainer.jsx';

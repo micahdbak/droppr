@@ -3,7 +3,7 @@
 import React from 'react';
 
 import { Page, Header, AppWindow } from './components';
-import { bytesToHRString } from './core';
+import { bytesToString, secondsToString } from './core';
 
 export function Success() {
   let isDropper = sessionStorage.getItem('isDropper');
@@ -12,8 +12,8 @@ export function Success() {
   let fileName = sessionStorage.getItem('fileName');
 
   if (!isDropper || !elapsedSeconds || !totalSize || !fileName) {
-    sessionStorage.setItem('error', `${isDropper} ${elapsedSeconds} ${totalSize} ${fileName}`);
-    window.location.href = window.location.origin + "/#error";
+    // go to Main.jsx
+    window.location.href = window.location.origin + "/#";
     window.location.reload();
     return <></>; // blank screen
   }
@@ -24,8 +24,8 @@ export function Success() {
   // fileName is already a string
 
   const summary = (isDropper === 'true' ? 'Sent ' : 'Received ') + fileName
-    + ` (${bytesToHRString(totalSize)}) in ${Math.round(elapsedSeconds)} seconds.`;
-  const avgBytesPerSecond = (totalSize / elapsedSeconds).toFixed();
+    + ` (${bytesToString(totalSize)}) in ${secondsToString(elapsedSeconds)}.`;
+  const avgBytesPerSecond = Math.ceil(totalSize / elapsedSeconds);
 
   const onGoBack = () => {
     window.location.href = window.location.origin + "/#";
@@ -40,7 +40,7 @@ export function Success() {
           <div className="flex flex-col items-start">
             <p className="text-lg mb-2">{summary}</p>
             <p className="text-sm">
-              That's an average speed of {bytesToHRString(avgBytesPerSecond)} per second.
+              That's an average speed of {bytesToString(avgBytesPerSecond)} per second.
             </p>
           </div>
         </AppWindow>

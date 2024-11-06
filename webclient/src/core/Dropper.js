@@ -2,111 +2,75 @@
 
 import { Peer } from './Peer.js';
 
-const _messageSize = parseInt(process.env.REACT_APP_MESSAGE_SIZE, 10);
 
-/* Dropper - send files
- *
- * public methods:
- *
- * constructor(file) - start a drop for the provided file
- * close()           - Close connection
- *
- * public fields:
- *
- * bytesSent - Total number of bytes sent
- *
- * dispatches events:
- *
- * connected    -> Event
- * disconnected -> Event
- * failed       -> Event
- * done         -> Event
+
+const MESSAGE_SIZE = 16384;
+
+
+
+/**
+ * dispatches error, connected, disconnected, done
+ * @extends EventTarget
  */
 export class Dropper extends EventTarget {
-  // private fields
 
-  _peer = null; // the peer connection
-  _dataChannel = null; // the data channel
-  _state = 'send'; // the current state
 
-  // public fields
 
+  _peer = null;
   file = null; // the file being sent
-  bytesSent = 0;
-  error = new Error("huh?");
+  bytesSent = 0; // the number of bytes sent so far
+  error = null;
 
-  // constructor
 
+
+  /**
+   * @param {File} file - the file to drop
+   */
   constructor(file) {
     super();
 
-    this.file = file;
-
-    // start waiting for peer connection
-    this._peer = new Peer(true);
-    this._peer.addEventListener('connected', () => {
-      this.dispatchEvent(new Event('connected'));
-    });
-    this._peer.addEventListener('disconnected', () => {
-      this.dispatchEvent(new Event('disconnected'));
-    });
-
-    // create data channel to stream the file
-    this._dataChannel = this._peer.createDataChannel('filestream');
-    this._dataChannel.addEventListener('open', this._sendMessage.bind(this));
-    this._dataChannel.addEventListener('bufferedamountlow', this._sendMessage.bind(this));
+    // start dropping the file
+    this._dropFile(file);
   }
 
-  // private methods
 
-  async _sendMessage() {
+
+  /**
+   * @param {File} file 
+   */
+  async _dropFile(file) {
     try {
-      if (this._state === 'send') {
-        // check if done sending file
-        if (this.bytesSent >= this.file.size) {
-          this._dataChannel.send('done'); // send done message
+      this._peer = new Peer(true);
 
-          // set state to done
-          this._state = 'done';
-          this.dispatchEvent(new Event('done'));
+      // for UI informative purposes; peer will handle reconnection internally
+      this._peer.addEventListener('error', (event) => {
+        this.error = new Error('peer error', { cause: event.target.error });
+        this.dispatchEvent(new Event('error'));
+      });
+      this._peer.addEventListener('connected', () => this.dispatchEvent(new Event('connected')));
+      this._peer.addEventListener('disconnected', () => this.dispatchEvent(new Event('disconnected')));
 
-          // close peer connection
-          this.close();
-          return;
-        }
+      while (this.bytesSent < file.size) {
+        // slice the file given the current offset
+        const end = Math.min(this.bytesSent + MESSAGE_SIZE, file.size);
+        const blob = file.slice(this.bytesSent, end); // get blob from file at offset
 
-        // slice the file given the current position
-        let end = Math.min(this.bytesSent + _messageSize, this.file.size);
-        let blob = this.file.slice(this.bytesSent, end);
-
-        // update the current position
-        this.bytesSent = end;
-
-        // get buffer and send it through the data channel
-        // NOTE: this._dataChannel will dispatch bufferedamountlow when done
-        this._state = 'sending'; // incase an event follows the 'await' below, don't send
-        let buffer = await blob.arrayBuffer();
-        this._state = 'send'; // next event should send
-        
-        // queue the message
-        this._dataChannel.send(buffer);
-
-        // take out the trash
-        buffer = null;
-        blob = null;
-      } else {
-        console.log(
-          `Dropper: Passing state '${this._state}' in _sendMessage.`
-        );
+        // send blob to peer
+        await this._peer.send(blob);
+        this.bytesSent = end; // update offset for next loop
       }
+
+      // TODO: listen for Peer._dataChannel bufferedamountlow event before closing
+      await new Promise((resolve) => {
+        setTimeout(resolve, 5000); // 5 seconds
+      });
+      this._peer.close();
+      this.dispatchEvent(new Event('done'));
     } catch (err) {
-      console.log(`Dropper: Error in _sendMessage: ${err.toString()}`);
+      this._peer?.close();
+      this._peer = null;
+      this.error = err;
+      this.dispatchEvent(new Event('error'));
     }
-  }
-
-  // public methods
-
-  close() {
-    this._peer.close();
   }
 }

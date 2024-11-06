@@ -5,16 +5,22 @@ import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 
+import { bytesToString, errorToString } from './core';
 import { AppWindow, Page, Header } from './components';
-import { bytesToHRString } from './core';
 
+/**
+ * @param {object} props
+ * @param {string} props.code
+ * @param {function} props.onConfirm
+ */
 export function ReceiverConfirm(props) {
+  const { code, onConfirm } = props;
+
   const [file, setFile] = useState({
     name: 'tmp.bin',
     size: 0,
     type: 'application/octet-stream'
   });
-  const { code, onConfirm } = props;
 
   const onGoBack = () => {
     window.location.href = window.location.origin + "/#";
@@ -22,14 +28,17 @@ export function ReceiverConfirm(props) {
   };
 
   useEffect(() => {
+    console.log('1');
+    
     const peekFile = async () => {
       try {
         const res = await axios.get("/api/peek/" + code.toUpperCase());
         setFile(res.data.file);
       } catch (err) {
-        console.log(err.toString());
-        
-        //sessionStorage.setItem('error', err.toString());
+        sessionStorage.setItem('error', errorToString(err));
+        console.log(err);
+
+        // go to ShowError.jsx
         //window.location.href = window.location.origin + "/#error";
         //window.location.reload();
       }
@@ -46,7 +55,7 @@ export function ReceiverConfirm(props) {
           <div className="flex flex-col items-start">
             <p className="text-lg">The drop code is:</p>
             <p className="text-6xl font-mono bg-gray-200 px-2 rounded-lg">{code.toUpperCase()}</p>
-            <p className="text-xs text-gray-500">{file.name}, {bytesToHRString(file.size)}.</p>
+            <p className="text-xs text-gray-500">{file.name}, {bytesToString(file.size)}.</p>
             <div className="flex flex-row gap-1 mt-4">
               <button
                 type="button"

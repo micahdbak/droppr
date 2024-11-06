@@ -10,7 +10,9 @@ export function ShowError() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setError(sessionStorage.getItem('error'));
+    const errStr = sessionStorage.getItem('error');
+    console.log(errStr); // longer stack trace
+    setError(errStr.split('\n')[0]); // just the first line (error message)
   }, []);
 
   return (
@@ -18,8 +20,8 @@ export function ShowError() {
       <Header />
       <div className="flex flex-col justify-center items-center">
         <FontAwesomeIcon className="text-4xl text-red-400 mb-4" icon={faFaceDizzy} />
-        <p className="text-xl font-bold">Error</p>
-        <p className="text-lg mb-2">{error}</p>
+        <p className="text-xl mb-1">An unexpected error occurred.</p>
+        <p className="text-sm mb-2">{error}</p>
         <a className="text-sm text-blue-400 hover:underline" href="/#">Go back.</a>
       </div>
     </Page>

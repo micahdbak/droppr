@@ -6,81 +6,23 @@ import { FileStore } from './FileStore.js';
 
 
 /**
+ * dispatches error, connected, disconnected, processing, cleanup, done
  * @extends EventTarget
  */
 export class Receiver extends EventTarget {
 
 
 
-  /**
-   * @private
-   * @type {Peer}
-   */
   _peer = null;
-
-  /**
-   * @private
-   * @type {RTCDataChannel}
-   */
-  _dataChannel = null;
-
-  /**
-   * @private
-   * @type {Blob}
-   */
-  _blob = new Blob([], { type: 'application/octet-stream' });
-
-  /**
-   * @private
-   * @type {string}
-   */
-  _state = 'receive';
-
-  /**
-   * stream to write file for the File System Access API (only Chromium-based browsers)
-   * @private
-   * @type {WritableStream}
-   */
-  _writableStream = null; // stream to write file
-
-  /**
-   * IndexedDB helper class (for other browsers)
-   * @private
-   * @type {FileStore}
-   */
-  _fileStore = null;
-
-
-  
-  /**
-   * @namespace
-   * @property {string} name - file name
-   * @property {number} size - file size
-   * @property {string} type - file MIME type
-   * @property {string} href - file download link
-   */
   file = {
     name: 'tmp.bin',
     size: 0,
     type: 'application/octet-stream',
     href: ''
-  }; // fake data to be overwritten
-
-  /**
-   * @type {number}
-   */
-  bytesReceived = 0;
-
-  /**
-   * Progress of processing file, from 0 to 100.
-   * @type {number}
-   */
-  processingProgress = 0;
-
-  /**
-   * @type {Error}
-   */
-  error = new Error("huh?");
+  }; // information on the file being received
+  bytesReceived      = 0; // number of bytes received from the peer
+  processingProgress = 0; // progress of processing file, from 0 to 100
+  error = null;
 
 
 
@@ -93,227 +35,120 @@ export class Receiver extends EventTarget {
     this.file = file;
 
     if (window.showSaveFilePicker) {
-      // Chromium-based browsers
-      const awaitShowSaveFilePicker = async () => {
-        const fileHandle = await window.showSaveFilePicker({
-          suggestedName: this.file.name
-        });
-        this._writableStream = await fileHandle.createWritable();
-    
-        this._setupPeerConnection(this._receiveMessageIntoWritableStream.bind(this));
-      };
-      awaitShowSaveFilePicker();
+      this._fileSystemAccessApiLoop();
     } else if (window.___DROPPR___.fileStore instanceof FileStore) {
-      // FileStore is pre-loaded and already cleared, check src/index.js
-      this._fileStore = window.___DROPPR___.fileStore;
-      this._setupPeerConnection(this._receiveMessageIntoFileStore.bind(this));
+      this._indexedDbLoop();
     } else {
       // terribly outdated browsers
       throw new Error('incompatible browser');
     }
   }
 
-  
-
-  /**
-   * @param {function} handleMessage - function to call upon receiving a message from the peer
-   */
-  _setupPeerConnection(handleMessage) {
-    // attempt to open a connection with the dropper and wait for a WebRTC data channel to open
-    this._peer = new Peer(false);
-    this._peer.addEventListener('datachannel', (event) => {
-      // only one data channel should be opened; peer is being sus
-      if (this._dataChannel !== null) {
-        this._peer.close();
-        this._peer = null;
-        this.error = new Error("a second data channel was opened.");
-        this.dispatchEvent(new Event('aborted'));
-        return;
-      }
-
-      // prepare data channel and receive messages
-      this._dataChannel = event.channel;
-      this._dataChannel.binaryType = 'blob'; // make sure received messages are blobs
-      this._dataChannel.addEventListener('message', handleMessage);
-      this.dispatchEvent(new Event('connected'));
-    });
-    this._peer.addEventListener('disconnected', () => {
-      this.dispatchEvent(new Event('disconnected'));
-    });
-  }
-
 
 
   /**
-   * @param {MessageEvent} event - event.data containing the blob or text message sent by dropper
+   * receive a file for Chromium-based browsers
    */
-  async _receiveMessageIntoWritableStream(event) {
-    const data = event.data;
-
-    // got binary data for the file
-    if (data instanceof Blob) {
-      this._blob = new Blob([this._blob, data], { type: 'application/octet-stream' });
-      this.bytesReceived += data.size;
-
-      if (this._state === 'receive') {
-        this._state = 'receiving'; // next message shouldn't write
-
-        // write the compiled blob from the last n messages to the writable stream
-        const compiledBlob = this._blob;
-        this._blob = new Blob([], { type: 'application/octet-stream' });
-        await this._writableStream.write(compiledBlob);
-
-        // got done message while awaiting the above; peer connection was closed
-        if (this._state === 'done') {
-          // write any remaining data, if there is any
-          if (this._blob.size > 0) {
-            await this._writableStream.write(this._blob);
-          }
-
-          // close the file and dispatch done event
-          await this._writableStream.close();
-          this.dispatchEvent(new Event('done'));
-          this.close();
-        } else {
-          this._state = 'receive';
-        }
-      }
-      // else, this._blob has expanded for the next message
-    } else if (typeof data === 'string' && data === 'done') {
-      // close peer connection; shouldn't receive any more messages
-      this._peer.close();
-      this._peer = null;
-
-      console.log("Info in Receiver._receiveMessageIntoWritableStream: got done message");
-
-      // no writes are currently happening; be done with the transfer
-      if (this._state === 'receive') {
-        await this._writableStream.close();
-        this.dispatchEvent(new Event('done'));
-        this._state = 'done';
-        this.close();
-      } else {
-        // a write is currently happening; when it's done, it will clean up
-        this._state = 'done';
-      }
-    }
-  }
-
-
-
-  /**
-   * @param {MessageEvent} event - event.data containing the blob or text message sent by dropper
-   */
-  async _receiveMessageIntoFileStore(event) {
+  async _fileSystemAccessApiLoop() {
     try {
-      const data = event.data;
+      // prompt the user to choose a download location
+      const fileHandle = await window.showSaveFilePicker({
+        suggestedName: this.file.name
+      });
+      const writableStream = await fileHandle.createWritable();
+      this._peer = new Peer(false);
 
-      // got binary data for the file
-      if (data instanceof Blob) {
-        this._blob = new Blob([this._blob, data], { type: 'application/octet-stream' });
+      // for UI informative purposes; peer will handle reconnection internally
+      this._peer.addEventListener('error', (event) => {
+        this.error = new Error('peer error', { cause: event.target.error });
+        this.dispatchEvent(new Event('error'));
+      });
+      this._peer.addEventListener('connected', () => this.dispatchEvent(new Event('connected')));
+      this._peer.addEventListener('disconnected', () => this.dispatchEvent(new Event('disconnected')));
 
-        if (this._state === 'receive') {
-          this._state = 'receiving'; // next message shouldn't open a transaction
+      while (this.bytesReceived < this.file.size) {
+        // if not connected, this will block until connected
+        const blob = await this._peer.receive();
 
-          // prepare a compiled blob of received messages so far
-          const compiledBlob = this._blob;
-          this._blob = new Blob([], { type: 'application/octet-stream' });
-
-          // get the offset to write into the file store
-          const offset = this.bytesReceived;
-          this.bytesReceived += compiledBlob.size;
-
-          try {
-            await this._fileStore.add(offset, compiledBlob);
-          } catch (err) {
-            console.log('Error in Receiver._receiveMessageIntoFileStore: ' + err.toString());
-          }
-
-          // got done message while awaiting the above; peer connection was closed
-          if (this._state === 'done') {
-            // write any remaining data, if there is any
-            if (this._blob.size > 0) {
-              const offset = this.bytesReceived;
-              this.bytesReceived += this._blob.size;
-
-              try {
-                await this._fileStore.add(offset, this._blob);
-              } catch (err) {
-                console.log('Error in Receiver._receiveMessageIntoFileStore: ' + err.toString());
-              }
-
-              // free memory, basically
-              this._blob = new Blob([], { type: 'application/octet-stream' });
-            }
-
-            await this._downloadFromFileStore();
-          } else {
-            this._state = 'receive'; // next event may receive
-          }
-        }
-      } else if (typeof data === 'string' && data === 'done') {
-        // close peer connection; shouldn't receive any more messages
-        this._peer.close();
-        this._peer = null;
-  
-        // no writes are currently happening; be done with the transfer
-        if (this._state === 'receive') {
-          await this._downloadFromFileStore();
-        } else {
-          // a write is currently happening; when it's done, it will clean up
-          this._state = 'done';
-        }
+        // write blob to file
+        await writableStream.write(blob);
+        this.bytesReceived += blob.size;
       }
-    } catch (err) {
-      console.log('Error in Receiver._receiveMessageIntoFileStore: ' + err.toString());
-      this.error = err;
-      this.dispatchEvent(new Event('aborted'));
-      this.close();
-    }
-  }
 
-
-
-  async _downloadFromFileStore() {
-    // get the file from IndexedDB
-    this.dispatchEvent(new Event('processing'));
-    const fileBlob = await this._fileStore.flush(this.file.size, this.file.type, (progress) => {
-      this.processingProgress = progress;
-    });
-
-    // download the file
-    const downloadElement = document.createElement('a');
-    downloadElement.href = URL.createObjectURL(fileBlob);
-    downloadElement.download = this.file.name;
-    downloadElement.click();
-
-    // wait five seconds before clearing the file store
-    await new Promise((resolve) => {
-      setTimeout(resolve, 5000);
-    });
-
-    // clean up from the IndexedDB
-    this.dispatchEvent(new Event('cleanup'));
-    await this._fileStore.clear((progress) => {
-      this.processingProgress = progress;
-    });
-
-    // all done
-    this.dispatchEvent(new Event('done'));
-    this.close();
-  }
-
-
-
-  close() {
-    if (this._fileStore !== null) {
-      this._fileStore.close();
-      this._fileStore = null;
-    }
-
-    if (this._peer !== null) {
+      // no more blobs to receive; clean up
       this._peer.close();
-      this._peer = null;
+      await writableStream.close();
+      this.dispatchEvent(new Event('done'));
+    } catch (err) {
+      this._peer?.close();
+      this.error = err;
+      this.dispatchEvent(new Event('error'));
+    }
+  }
+
+
+
+  /**
+   * receive a file for non-Chromium-based browsers
+   */
+  async _indexedDbLoop() {
+    try {
+      /**
+       * @type {FileStore}
+       */
+      const fileStore = window.___DROPPR___.fileStore;
+      this._peer = new Peer(false);
+
+      // for UI informative purposes; peer will handle reconnection internally
+      this._peer.addEventListener('error', (event) => {
+        this.error = new Error('peer error', { cause: event.target.error });
+        this.dispatchEvent(new Event('error'));
+      });
+      this._peer.addEventListener('connected', () => this.dispatchEvent(new Event('connected')));
+      this._peer.addEventListener('disconnected', () => this.dispatchEvent(new Event('disconnected')));
+
+      while (this.bytesReceived < this.file.size) {
+        // if not connected, this will block until connected
+        const blob = await this._peer.receive();
+
+        // write blob to file store
+        await fileStore.add(this.bytesReceived, blob);
+        this.bytesReceived += blob.size; // important that this comes after the above
+      }
+
+      // no more blobs to receive; process file and download
+      this._peer.close();
+
+      // get the file from IndexedDB
+      this.dispatchEvent(new Event('processing'));
+      const compiledBlob = await fileStore.flush(this.file.size, this.file.type, (progress) => {
+        this.processingProgress = progress;
+      });
+
+      // download the file
+      const downloadElement = document.createElement('a');
+      downloadElement.href = URL.createObjectURL(compiledBlob);
+      downloadElement.download = this.file.name;
+      downloadElement.click();
+
+      // wait ten seconds before clearing the file store
+      // TODO: something more reliable than this
+      //await new Promise((resolve) => {
+      //  setTimeout(resolve, 10000);
+      //});
+
+      // clean up from the IndexedDB
+      //this.dispatchEvent(new Event('cleanup'));
+      //await fileStore.clear((progress) => {
+      //  this.processingProgress = progress;
+      //});
+
+      // all done
+      this.dispatchEvent(new Event('done'));
+    } catch (err) {
+      this._peer?.close();
+      this.error = err;
+      this.dispatchEvent(new Event('error'));
     }
   }
 }

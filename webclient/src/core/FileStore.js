@@ -1,60 +1,52 @@
 // FileStore.js
 
 // increase this when updating the db schema
-const _databaseVersion = 4;
+const DB_VERSION = 4;
 
-/* FileStore - Use IndexedDB to store and get files
- *
- * public methods:
- *
- * constructor()     - open the database
- * add(offset, blob) - add blob for a file
- * flush()           - get a combined blob for a given label
- * clearBlobs()      - clear the file store
- * close()           - close the database connection
- *
- * dispatches events:
- *
- * openerror -> Event
- * open      -> Event
- * error     -> Event
+
+
+/**
+ * @extends EventTarget
  */
 export class FileStore extends EventTarget {
-  // private fields
+
+
 
   _database; // the database
   _offset = 0;
-
-  // public fields
-
   error;
 
-  // constructor
+
 
   constructor() {
     super();
 
-    const openRequest = window.indexedDB.open('fileStore', _databaseVersion);
+    const openRequest = window.indexedDB.open('fileStore', DB_VERSION);
 
     openRequest.addEventListener('error', (event) => {
-      this.error = event.target.error;
+      this.error = new Error('open request error', { cause: event.target.error });
       this.dispatchEvent(new Event('openerror'));
     });
 
     openRequest.addEventListener('blocked', () => {
-      this.error = new Error('IndexedDB open request was blocked');
+      this.error = new Error('open request was blocked');
       this.dispatchEvent(new Event('openerror'));
     });
 
     openRequest.addEventListener('upgradeneeded', (event) => {
-      // delete the blobs object store if it exists
-      if (event.target.result.objectStoreNames.contains('blobs')) {
-        console.log('FileStore: Deleting blobs object store...');
-        event.target.result.deleteObjectStore('blobs');
-      }
+      try {
+        // delete the blobs object store if it exists
+        if (event.target.result.objectStoreNames.contains('blobs')) {
+          event.target.result.deleteObjectStore('blobs');
+        }
 
-      // object store for blobs with label and offset as keys
-      event.target.result.createObjectStore('blobs', { keyPath: ['offset'] });
+        // object store for blobs with label and offset as keys
+        event.target.result.createObjectStore('blobs', { keyPath: ['offset'] });
+      } catch (err) {
+        this.close();
+        this.error = err;
+        this.dispatchEvent(new Event('openerror'));
+      }
     });
 
     openRequest.addEventListener('success', async (event) => {
@@ -65,9 +57,12 @@ export class FileStore extends EventTarget {
     });
   }
 
-  // public methods
 
-  // add blob data for a file
+
+  /**
+   * @param {number} offset 
+   * @param {Blob} blob 
+   */
   async add(offset, blob) {
     // return the IDBRequest for this transaction
     const request = this._database
@@ -84,7 +79,14 @@ export class FileStore extends EventTarget {
     });
   }
 
-  // flush all blobs into a single blob
+
+
+  /**
+   * @param {number} size 
+   * @param {string} type 
+   * @param {function} setPercentage 
+   * @returns {Blob}
+   */
   async flush(size, type, setPercentage) {
     // start a read-only transaction on the blobs object store
     const blobs = this._database
@@ -116,12 +118,17 @@ export class FileStore extends EventTarget {
       });
 
       cursorRequest.addEventListener('error', (event) => {
-        this.error = event.target.error;
+        this.error = new Error('cursor request error', { cause: event.target.error });
         reject(this.error);
       });
     });
   }
 
+
+
+  /**
+   * @param {function} setPercentage
+   */
   async clear(setPercentage) {
     return new Promise((resolve, reject) => {
       const countRequest = this._database
@@ -156,23 +163,23 @@ export class FileStore extends EventTarget {
   
         // reject
         cursorRequest.addEventListener('error', (event) => {
-          this.error = event.target.error;
+          this.error = new Error('cursor request error', { cause: event.target.error });
           reject();
         });
       });
 
       // reject
       countRequest.addEventListener('error', (event) => {
-        this.error = event.target.error;
+        this.error = new Error('cursor request error', { cause: event.target.error });
         reject();
       });
     })
   }
 
+
+
   close() {
-    if (this._database !== null) {
-      this._database.close();
-      this._database = null;
-    }
+    this._database?.close();
+    this._database = null;
   }
 }
