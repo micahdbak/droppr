@@ -8,6 +8,7 @@ import { Receiver, errorToString } from './core';
 import { ReceiverConfirm } from './ReceiverConfirm.jsx';
 import { ReceiverProcessing } from './ReceiverProcessing.jsx';
 import { ReceiverTransfer } from './ReceiverTransfer.jsx';
+import { SpinningWheel } from './SpinningWheel.jsx';
 
 const STATE_CONFIRM    = 0;
 const STATE_CONNECTING = 1;
@@ -17,7 +18,7 @@ const STATE_CLEANUP    = 4;
 
 export function ReceiverContainer() {
   const [bytesReceived, setBytesReceived] = useState(0);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(1);
   const [file, setFile] = useState({
     name: 'tmp.bin',
     size: 0,
@@ -84,20 +85,21 @@ export function ReceiverContainer() {
                 const _bytesReceived = receiver.bytesReceived;
                 setBytesReceived(_bytesReceived);
   
-                const _elapsedSeconds = (Date.now() - startTime) / 1000;
-                setElapsedSeconds(Math.round(_elapsedSeconds));
+                const msElapsed = Date.now() - startTime;
+                const _elapsedSeconds = msElapsed / 1000;
+                setElapsedSeconds(Math.ceil(_elapsedSeconds));
 
                 const avgSecondsPerByte = _elapsedSeconds / _bytesReceived;
                 const _remainingSeconds = (_file.size - _bytesReceived) * avgSecondsPerByte;
-                setRemainingSeconds(Math.round(_remainingSeconds));
+                setRemainingSeconds(Math.ceil(_remainingSeconds));
                 
                 // for Success.jsx
-                sessionStorage.setItem('elapsedSeconds', Math.round(_elapsedSeconds));
+                sessionStorage.setItem('elapsedSeconds', Math.ceil(_elapsedSeconds));
               }
 
               return _state;
             });
-          }, 250); // 250ms
+          }, 100); // 100ms
         });
 
         receiver.addEventListener('disconnected', () => {
@@ -148,16 +150,9 @@ export function ReceiverContainer() {
       );
 
     case STATE_TRANSFER:
-      return (
-        <ReceiverTransfer
-          bytesReceived={bytesReceived}
-          fileName={file.name}
-          remainingSeconds={remainingSeconds}
-          totalSize={file.size}
-        />
-      );
+      return <ReceiverTransfer bytesReceived={bytesReceived} fileName={file.name} remainingSeconds={remainingSeconds} totalSize={file.size} />;
     
     default: // STATE_CONNECTING
-      return <></>;
+      return <SpinningWheel />;
   }
 }

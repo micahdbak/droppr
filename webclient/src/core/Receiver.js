@@ -133,15 +133,15 @@ export class Receiver extends EventTarget {
 
       // wait ten seconds before clearing the file store
       // TODO: something more reliable than this
-      //await new Promise((resolve) => {
-      //  setTimeout(resolve, 10000);
-      //});
+      await new Promise((resolve) => {
+        setTimeout(resolve, 10000);
+      });
 
       // clean up from the IndexedDB
-      //this.dispatchEvent(new Event('cleanup'));
-      //await fileStore.clear((progress) => {
-      //  this.processingProgress = progress;
-      //});
+      this.dispatchEvent(new Event('cleanup'));
+      await fileStore.clear((progress) => {
+        this.processingProgress = progress;
+      });
 
       // all done
       this.dispatchEvent(new Event('done'));

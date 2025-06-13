@@ -110,3 +110,45 @@ func insertSession(dropId string, dropRole string) error {
 
 	return nil
 }
+
+// ----------------------------------------------------------------
+
+// select the drop id
+func selectDropWithCode(code string) (File, string, error) {
+	row := db.QueryRow(
+		context.Background(),
+		"SELECT id, file_name, file_size, file_type FROM drops WHERE code = $1 AND is_complete = 'f'",
+		code,
+	)
+
+	var (
+		id       string
+		fileName string
+		fileSize int64
+		fileType string
+	)
+	err := row.Scan(&id, &fileName, &fileSize, &fileType)
+	if err != nil {
+		return File{"", 0, ""}, "", err
+	}
+
+	return File{fileName, fileSize, fileType}, id, nil
+}
+
+// ----------------------------------------------------------------
+
+// select the drop id
+func selectNumDropsComplete() (int64, error) {
+	row := db.QueryRow(
+		context.Background(),
+		"SELECT COUNT(*) FROM drops WHERE is_complete='t'",
+	)
+
+	var count int64
+	err := row.Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}

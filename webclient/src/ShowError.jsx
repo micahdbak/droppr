@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFaceDizzy } from '@fortawesome/free-solid-svg-icons';
 
-import { Page, Header } from './components';
+import { AppWindow } from './components';
 
 export function ShowError() {
   const [error, setError] = useState("");
@@ -16,14 +16,15 @@ export function ShowError() {
   }, []);
 
   return (
-    <Page>
-      <Header />
+    <AppWindow>
       <div className="flex flex-col justify-center items-center">
-        <FontAwesomeIcon className="text-4xl text-red-400 mb-4" icon={faFaceDizzy} />
-        <p className="text-xl mb-1">An unexpected error occurred.</p>
-        <p className="text-sm mb-2">{error}</p>
-        <a className="text-sm text-blue-400 hover:underline" href="/#">Go back.</a>
+        <img className="mb-2" src="error.png" />
+        <p className="text-2xl font-semibold">Error.</p>
+        <p className="text-sm mb-4">{error}</p>
+        <a className="text-lg bg-gray-700 hover:bg-gray-500 text-white px-4 py-2 rounded-xl mb-1" href="/#">
+          Go Back
+        </a>
       </div>
-    </Page>
+    </AppWindow>
   );
 }

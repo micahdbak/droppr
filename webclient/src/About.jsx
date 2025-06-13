@@ -2,17 +2,18 @@
 
 import React from 'react';
 
-import { Page, Header } from './components';
+import { AppWindow } from './components';
 
 export function About() {
   return (
-    <Page>
-      <Header />
-      <div className="w-64 flex flex-col justify-center items-start gap-4">
-        <img src="/box.png" className="w-52 rounded-xl "></img>
-        <p>Brought to you by <u>Micah Baker</u>, <u>Nakul Bansal</u>, <u>Johnny Deng</u>, and <u>Simon Purdon</u>.</p>
-        <a className="text-blue-400 hover:underline" href="/#">Go back</a>
+    <AppWindow>
+      <div className="flex flex-col items-center">
+        <img src="/box.png" className="w-52 rounded-xl mb-4"></img>
+        <p className="mb-4">Brought to you by <u>Nakul Bansal</u>, <u>Micah Baker</u>, <u>Johnny Deng</u>, and <u>Simon Purdon</u>.</p>
+        <a className="text-lg bg-gray-700 hover:bg-gray-500 text-white px-4 py-2 rounded-xl mb-1" href="/#">
+          Go Back
+        </a>
       </div>
-    </Page>
+    </AppWindow>
   );
 }

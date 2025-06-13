@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faCheck, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 
-import { Page, Header, AppWindow } from './components';
+import { AppWindow } from './components';
 import { bytesToString } from './core';
 
 /**
@@ -35,36 +35,27 @@ export function DropperWaiting(props) {
   };
 
   return (
-    <Page>
-      <Header />
-      <div className="flex flex-col gap-2 justify-center align-center">
-        <AppWindow titleText="Waiting for receiver..." imgSrc="waiting.gif">
-          <div className="flex flex-col items-start">
-            <p className="text-lg">Your drop code is:</p>
-            <p className="text-6xl font-mono bg-gray-200 px-2 rounded-lg">{code}</p>
-            <p className="text-xs mb-4 text-gray-500">{fileName}, {bytesToString(totalSize)}.</p>
-            <p className="text-xs">Download link:</p>
-            <div className="flex flex-row gap-2 mb-4">
-              <input
-                type="text"
-                className="font-mono font-bold text-sm focus:outline-none"
-                style={{ width: `${downloadLink.length}ch` }}
-                value={downloadLink}
-                readOnly={true}
-              />
-              {downloadLinkCopied ? (
-                <FontAwesomeIcon icon={faCheck} />
-              ) : (
-                <FontAwesomeIcon className="cursor-pointer" icon={faCopy} onClick={copyDownloadLink} />
-              )}
-            </div>
-          </div>
-        </AppWindow>
-        <p className="text-center text-sm text-red-400">
-          <FontAwesomeIcon icon={faTriangleExclamation} />
-          &emsp;Don't close this page.
-        </p>
+    <AppWindow>
+      <img src="/hourglass.gif" className="w-full h-20 mb-4 object-contain" />
+      
+      <p className="text-xl mb-1">Your drop code is:</p>
+      <p className="text-6xl font-mono bg-gray-200 px-2 rounded-lg">{code}</p>
+      <p className="text-xs mb-4 text-gray-500">{bytesToString(totalSize)}, {fileName}</p>
+
+      <div className="flex flex-row gap-2 mb-4">
+        <input
+          type="text"
+          className="font-mono text-sm focus:outline-none"
+          style={{ width: `${downloadLink.length}ch` }}
+          value={downloadLink}
+          readOnly={true}
+        />
+        {downloadLinkCopied ? (
+          <FontAwesomeIcon icon={faCheck} />
+        ) : (
+          <FontAwesomeIcon className="cursor-pointer" icon={faCopy} onClick={copyDownloadLink} />
+        )}
       </div>
-    </Page>
+    </AppWindow>
   );
 }

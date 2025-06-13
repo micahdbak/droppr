@@ -112,7 +112,7 @@ func serveRegister(w http.ResponseWriter, r *http.Request) {
 		Value:    id,
 		Path:     "/",
 		Expires:  time.Now().Add(24 * time.Hour), // expires in 24 hours
-		HttpOnly: true,                           // let JS see drop_id
+		HttpOnly: true,
 	})
 
 	// set the drop_role cookie
@@ -121,7 +121,7 @@ func serveRegister(w http.ResponseWriter, r *http.Request) {
 		Value:    "dropper",
 		Path:     "/",
 		Expires:  time.Now().Add(24 * time.Hour), // expires in 24 hours
-		HttpOnly: true,                           // let JS see drop_id
+		HttpOnly: true,
 	})
 
 	// response body has JSON object with drop_code

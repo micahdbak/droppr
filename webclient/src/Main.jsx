@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
-import { AppWindow, Page, Header } from './components';
+import { AppWindow } from './components';
 import { DropperContainer } from './DropperContainer.jsx';
 
 export function Main() {
@@ -73,39 +73,40 @@ export function Main() {
   }
 
   return (
-    <Page>
-      <Header />
-      <div className="flex flex-col gap-2 justify-center align-center">
-        <AppWindow titleText="Something to send?" imgSrc="drop_files.png">
-          <p className="text-lg">Drop File</p>
-          <p className="mb-1">or</p>
-          <input type="file" onChange={handleFile} className="hidden" />
-          <button
-            type="button"
-            className="text-lg bg-gray-700 hover:bg-gray-500 text-white px-4 py-2 rounded-xl"
-            onClick={() => document.querySelector('input[type="file"]').click()}
-          >
-            Choose File
-          </button>
-        </AppWindow>
-        <div className="flex flex-row justify-center items-center gap-1">
-          <p className="text-sm mr-2">Have a code?</p>
-          <input
-            className="rounded-lg font-mono text-sm px-2 py-1 ring-inset ring-1 ring-gray-400 focus:outline-none focus:ring-2"
-            style={{ width: "calc(6ch + 1rem)" }}
-            type="text"
-            placeholder="A1B2C3"
-            minLength="6"
-            maxLength="6"
-          />
-          <button
-            className="bg-gray-700 hover:bg-gray-500 text-white text-sm px-2 py-1 rounded-lg"
-            onClick={handleReceive}
-          >
-            Receive
-          </button>
-        </div>
+    <AppWindow>
+      <div className="flex flex-col items-center">
+        <img className="mb-4" src="drop_files.png" />
+        <p className="text-lg">droppr is <b>P2P file transfer</b></p>
+        <p className="text-sm mb-4 text-gray-500">(Best used with <u>Chrome</u> browsers)</p>
+        <input type="file" onChange={handleFile} className="hidden" />
+        <button
+          type="button"
+          className="text-lg bg-gray-700 hover:bg-gray-500 text-white px-4 py-2 rounded-xl mb-8"
+          onClick={() => document.querySelector('input[type="file"]').click()}
+        >
+          Choose File
+        </button>
       </div>
-    </Page>
+      <div
+        className="absolute flex w-full flex-row justify-center items-center gap-1"
+        style={{ bottom: '16px', left: '50%', transform: 'translateX(-50%)' }}
+      >
+        <p className="text-sm mr-2">Have a code?</p>
+        <input
+          className="rounded-lg font-mono text-sm px-2 py-1 ring-inset ring-1 ring-gray-400 focus:outline-none focus:ring-2"
+          style={{ width: "calc(6ch + 1rem)" }}
+          type="text"
+          placeholder="A1B2C3"
+          minLength="6"
+          maxLength="6"
+        />
+        <button
+          className="bg-gray-700 hover:bg-gray-500 text-white text-sm px-2 py-1 rounded-lg"
+          onClick={handleReceive}
+        >
+          Receive
+        </button>
+      </div>
+    </AppWindow>
   );
 }

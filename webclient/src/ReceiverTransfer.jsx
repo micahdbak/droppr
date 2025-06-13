@@ -4,7 +4,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 
-import { Page, Header, AppWindow, ProgressBar } from './components';
+import { AppWindow, ProgressBar } from './components';
 import { bytesToString, secondsToString } from './core';
 
 /**
@@ -17,25 +17,16 @@ import { bytesToString, secondsToString } from './core';
 export function ReceiverTransfer(props) {
   const { bytesReceived, fileName, remainingSeconds, totalSize } = props;
   
-  const percentTransferred = (100 * bytesReceived / totalSize).toFixed(1);
+  const percentTransferred = Math.round(100 * bytesReceived / totalSize);
 
   return (
-    <Page>
-      <Header />
-      <div className="flex flex-col gap-2 justify-center align-center">
-        <AppWindow titleText={`Receiving ${fileName}...`} imgSrc="drop.gif">
-          <div className="flex flex-col items-start">
-            <p className="text-base">{percentTransferred}% done</p>
-            <ProgressBar bytes={bytesReceived} total={totalSize} />
-            <p className="text-sm text-gray-500 mb-3">{bytesToString(bytesReceived)} of {bytesToString(totalSize)}</p>
-            <p className="text-base">{secondsToString(remainingSeconds)} remaining</p>
-          </div>
-        </AppWindow>
-        <p className="text-center text-sm text-red-400">
-          <FontAwesomeIcon icon={faTriangleExclamation} />
-          &emsp;Don't close this page.
-        </p>
-      </div>
-    </Page>
+    <AppWindow>
+      <img src="/drop.gif" className="w-full" />
+      <p className="text-lg">{`Receiving ${fileName}...`}</p>
+      <p className="text-base">{percentTransferred}% done</p>
+      <ProgressBar percentage={percentTransferred} />
+      <p className="text-sm text-gray-500 mb-3">{bytesToString(bytesReceived)} of {bytesToString(totalSize)}</p>
+      <p className="text-base">{secondsToString(remainingSeconds)} remaining</p>
+    </AppWindow>
   );
 }

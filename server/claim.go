@@ -3,78 +3,12 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
 	"time"
 )
-
-// ----------------------------------------------------------------
-
-// select the drop id
-func selectDropWithCode(code string) (File, string, error) {
-	row := db.QueryRow(
-		context.Background(),
-		"SELECT id, file_name, file_size, file_type FROM drops WHERE code = $1 AND is_complete = 'f'",
-		code,
-	)
-
-	var (
-		id       string
-		fileName string
-		fileSize int64
-		fileType string
-	)
-	err := row.Scan(&id, &fileName, &fileSize, &fileType)
-	if err != nil {
-		return File{"", 0, ""}, "", err
-	}
-
-	return File{fileName, fileSize, fileType}, id, nil
-}
-
-// ----------------------------------------------------------------
-
-// Peeks at the fileinfo for a drop
-func servePeek(w http.ResponseWriter, r *http.Request) {
-	setCORS(&w)
-
-	// ensure GET request
-	if r.Method != http.MethodGet {
-		writeHTTPError(&w, http.StatusBadRequest) // 400
-		return
-	}
-
-	// get drop code from request path and check it against a regex
-	code := r.URL.Path[10:] // /api/peek/:code
-	matches, err := regexp.Match("^([A-Z0-9]{6,6})$", []byte(code))
-	if err != nil || !matches {
-		writeHTTPError(&w, http.StatusBadRequest) // 400
-		return
-	}
-
-	file, _, err := selectDropWithCode(code)
-	if err != nil {
-		logWarning(r, "%v", err)
-		writeHTTPError(&w, http.StatusNotFound) // 404
-		return
-	}
-
-	// convert file to JSON byte array
-	file_json, err := json.Marshal(file)
-	if err != nil {
-		logError(r, "%v", err)
-		writeHTTPError(&w, http.StatusInternalServerError) // 500
-		return
-	}
-
-	// provide file info to requester
-	s := fmt.Sprintf("{\"file\":%s}", file_json)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(s))
-}
 
 // ----------------------------------------------------------------
 
@@ -138,7 +72,7 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 		Value:    id,
 		Path:     "/",
 		Expires:  time.Now().Add(24 * time.Hour), // expires in 24 hours
-		HttpOnly: true,                           // let JS see drop_id
+		HttpOnly: true,
 	})
 
 	// set the drop_id cookie
@@ -147,7 +81,7 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 		Value:    "receiver",
 		Path:     "/",
 		Expires:  time.Now().Add(24 * time.Hour), // expires in 24 hours
-		HttpOnly: true,                           // let JS see drop_id
+		HttpOnly: true,
 	})
 
 	// provide file info to requester

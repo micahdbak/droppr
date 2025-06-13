@@ -39,10 +39,12 @@ func main() {
 	}
 	logPlain("%s", dbText)
 
-	http.HandleFunc("/api/register", serveRegister)
-	http.HandleFunc("/api/peek/", servePeek)
+	http.HandleFunc("/api/check", serveCheck)
 	http.HandleFunc("/api/claim/", serveClaim)
 	http.HandleFunc("/api/cleanup", serveCleanup)
+	http.HandleFunc("/api/peek/", servePeek)
+	http.HandleFunc("/api/register", serveRegister)
+	http.HandleFunc("/api/status", serveStatus)
 	http.HandleFunc("/sc", serveSignalChannel)
 
 	log.Fatal(http.ListenAndServe(":5050", nil))

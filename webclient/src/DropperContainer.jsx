@@ -6,6 +6,7 @@ import axios from 'axios';
 import { Dropper, errorToString } from './core';
 import { DropperWaiting } from './DropperWaiting.jsx';
 import { DropperTransfer } from './DropperTransfer.jsx';
+import { SpinningWheel } from './SpinningWheel.jsx';
 
 const STATE_WAITING    = 0;
 const STATE_CONNECTING = 1;
@@ -52,13 +53,14 @@ export function DropperContainer(props) {
             const _bytesSent = dropper.bytesSent;
             setBytesSent(_bytesSent);
     
-            const elapsedSeconds = (Date.now() - startTime) / 1000;
+            const msElapsed = Date.now() - startTime;
+            const elapsedSeconds = msElapsed / 1000;
             const avgSecondsPerByte = elapsedSeconds / _bytesSent;
-            setRemainingSeconds(Math.round((file.size - _bytesSent) * avgSecondsPerByte));
+            setRemainingSeconds(Math.ceil((file.size - _bytesSent) * avgSecondsPerByte));
 
             // for Success.jsx
-            sessionStorage.setItem('elapsedSeconds', JSON.stringify(Math.round(elapsedSeconds)));
-          }, 250); // 250ms
+            sessionStorage.setItem('elapsedSeconds', JSON.stringify(Math.ceil(elapsedSeconds)));
+          }, 100); // 100ms
         });
 
         dropper.addEventListener('disconnected', () => {
@@ -90,16 +92,9 @@ export function DropperContainer(props) {
       return <DropperWaiting code={code} fileName={file.name} totalSize={file.size} />;
 
     case STATE_TRANSFER:
-      return (
-        <DropperTransfer
-          bytesSent={bytesSent}
-          fileName={file.name}
-          remainingSeconds={remainingSeconds}
-          totalSize={file.size}
-        />
-      );
+      return <DropperTransfer bytesSent={bytesSent} fileName={file.name} remainingSeconds={remainingSeconds} totalSize={file.size} />;
   
     default: // STATE_CONNECTING
-      return <></>;
+      return <SpinningWheel />;
   }
 }
