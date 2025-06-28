@@ -10,14 +10,15 @@ import { SignalChannel } from './SignalChannel.js';
 const RTC_CONFIGURATION = {
   iceServers: [
     {
-      // public Google STUN servers
+      urls: 'stun:droppr.net:5051',
+    },
+    {
       urls: [
-        'stun:stun.l.google.com:19302',
-        'stun:stun1.l.google.com:19302',
-        'stun:stun2.l.google.com:19302',
-        'stun:stun3.l.google.com:19302'/*,
-        'stun:stun4.l.google.com:19302' */
-      ]
+        'turn:droppr.net:5051?transport=udp',
+        'turn:droppr.net:5051?transport=tcp'
+      ],
+      username: 'droppr',
+      credential: 'droppr'
     }
   ]
 };
@@ -52,6 +53,7 @@ export class Peer extends EventTarget {
   _state       = STATE_READY; // for Peer.send() and Peer.receive()
   _i           = 0; // index of current message in a batch
   _blob        = new Blob([], { type: 'application/octet-stream' }); // compiled blobs received from peer
+  _count       = 0;
 
   error = null;
 
@@ -75,6 +77,9 @@ export class Peer extends EventTarget {
     this._peerConnection.addEventListener('iceconnectionstatechange', this._onIceConnectionStateChange.bind(this));
     this._peerConnection.addEventListener('connectionstatechange', this._onConnectionStateChange.bind(this));
     this._peerConnection.addEventListener('icecandidate', this._onIceCandidate.bind(this));
+    this._peerConnection.addEventListener('icecandidateerror', (event) => {
+      console.error('ICE candidate error:', event);
+    });
 
     // if dropper, this end should create the data channel
     if (isDropper) {
@@ -113,7 +118,7 @@ export class Peer extends EventTarget {
       // if dropper, send an RTC peer connection offer
       if (this._isDropper) {
         const offer = await this._peerConnection.createOffer({ iceRestart: this._iceRestart });
-        this._peerConnection.setLocalDescription(offer);
+        await this._peerConnection.setLocalDescription(offer);
 
         // send the offer to the recipient
         const packet = { type: 'offer', offer };
@@ -184,10 +189,9 @@ export class Peer extends EventTarget {
               this._signalChannel.close();
               this._signalChannel = null;
             }
+          } else {
+            await this._peerConnection.addIceCandidate(message.candidate);
           }
-
-          // if message.candidate is null, this signals end-of-candidates
-          this._peerConnection.addIceCandidate(message.candidate);
 
           break;
 

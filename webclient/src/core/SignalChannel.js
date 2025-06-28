@@ -2,7 +2,7 @@
 
 const PING_RATE = 1000; // 1s
 
-const SC_URL = 'ws://localhost:5050/sc';
+const SC_URL = 'wss://droppr.net/sc';
 
 
 
