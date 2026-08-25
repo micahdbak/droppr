@@ -26,11 +26,6 @@ func completeDrop(dropId string) error {
 func serveCleanup(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 
-	if r.Method != http.MethodPost {
-		writeHTTPError(w, http.StatusBadRequest)
-		return
-	}
-
 	// delete the drop_id cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "drop_id",

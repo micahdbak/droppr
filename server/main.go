@@ -38,13 +38,14 @@ func main() {
 	}
 	slog.Info("database connection established", "db_response", dbText)
 
-	http.HandleFunc("/api/check", serveCheck)
-	http.HandleFunc("/api/claim/", serveClaim)
-	http.HandleFunc("/api/cleanup", serveCleanup)
-	http.HandleFunc("/api/peek/", servePeek)
-	http.HandleFunc("/api/register", serveRegister)
-	http.HandleFunc("/api/status", serveStatus)
-	http.HandleFunc("/sc", serveSignalChannel)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/check", serveCheck)
+	mux.HandleFunc("POST /api/claim/{code}", serveClaim)
+	mux.HandleFunc("POST /api/cleanup", serveCleanup)
+	mux.HandleFunc("GET /api/peek/{code}", servePeek)
+	mux.HandleFunc("POST /api/register", serveRegister)
+	mux.HandleFunc("GET /api/status", serveStatus)
+	mux.HandleFunc("GET /sc", serveSignalChannel)
 
-	log.Fatal(http.ListenAndServe(":5050", nil))
+	log.Fatal(http.ListenAndServe(":5050", mux))
 }

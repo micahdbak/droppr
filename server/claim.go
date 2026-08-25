@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"regexp"
 	"time"
 )
 
@@ -17,16 +16,8 @@ import (
 func serveClaim(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 
-	// ensure POST request
-	if r.Method != http.MethodPost {
-		writeHTTPError(w, http.StatusBadRequest) // 400
-		return
-	}
-
-	// get drop code from request path and check it against a regex
-	code := r.URL.Path[11:] // /api/claim/:code
-	matches, err := regexp.Match("^([A-Z0-9]{6,6})$", []byte(code))
-	if err != nil || !matches {
+	code := r.PathValue("code")
+	if !dropCodeRegex.MatchString(code) {
 		writeHTTPError(w, http.StatusBadRequest) // 400
 		return
 	}

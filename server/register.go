@@ -72,18 +72,19 @@ func insertDrop(file File) (string, string, error) {
 func serveRegister(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 
-	// ensure POST request
-	if r.Method != http.MethodPost {
-		writeHTTPError(w, http.StatusBadRequest)
-		return
-	}
-
 	// get file information from request body
 	var file File
 	err := json.NewDecoder(r.Body).Decode(&file)
 	if err != nil {
 		// might fail if r.Body isn't JSON
 		slog.Warn("invalid register request body", "error", err)
+		writeHTTPError(w, http.StatusBadRequest)
+		return
+	}
+
+	// validate file payload
+	if file.Name == "" || file.Size <= 0 || file.Type == "" {
+		slog.Warn("invalid file payload in register request", "file", file)
 		writeHTTPError(w, http.StatusBadRequest)
 		return
 	}
