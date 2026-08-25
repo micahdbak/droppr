@@ -1,63 +1,25 @@
-/* eslint-disable react-refresh/only-export-components */
 import "../tailwind.css";
 
-import { useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { createHashRouter, RouterProvider } from "react-router";
 import axios from "axios";
 
 import { About } from "./About.jsx";
 import { ExistingCookies } from "./ExistingCookies.jsx";
-import { FileStore } from "./core/index.js";
 import { Main } from "./Main.jsx";
 import { ReceiverContainer } from "./ReceiverContainer.jsx";
 import { ShowError } from "./ShowError.jsx";
 import { Success } from "./Success.jsx";
-import { errorToString } from "./core/index.js";
-
-import { AppWindow, ProgressBar } from "./components/index.js";
-
-function ProgressThingy() {
-  const [progress, setProgress] = useState(0);
-  const [startTime] = useState(Date.now());
-
-  const msElapsed = Date.now() - startTime;
-
-  useEffect(() => {
-    const _int = setInterval(() => {
-      setProgress((_p) => {
-        if (_p >= 10000) {
-          return 0;
-        }
-
-        return _p + Math.random() * 10;
-      });
-    }, 10);
-
-    return () => {
-      clearInterval(_int);
-    };
-  }, []);
-
-  return (
-    <AppWindow>
-      <ProgressBar bytes={progress} total={10000} msElapsed={msElapsed} />
-    </AppWindow>
-  );
-}
+import { errorToString } from "./lib";
 
 const router = createHashRouter([
   {
     path: "/",
-    element: <Main />, // Main will provide DropperContainer when ready
+    element: <Main />,
   },
   {
     path: "/error",
     element: <ShowError />,
-  },
-  {
-    path: "/progress",
-    element: <ProgressThingy />,
   },
   {
     path: "/success",
@@ -97,48 +59,7 @@ const start = async () => {
     }
   }
 
-  // check if File System Access API is available (Chromium browsers)
-  if (window.showSaveFilePicker) {
-    window.___DROPPR___ = {
-      dropper: null,
-      receiver: null,
-      fileStore: null, // don't use IndexedDB
-    };
-    root.render(<RouterProvider router={router} />); // start droppr
-  } else {
-    // non-Chromium browsers, e.g., FireFox, Safari, etc.
-    try {
-      window.___DROPPR___ = {
-        dropper: null,
-        receiver: null,
-        fileStore: new FileStore(),
-      };
-
-      // connection to IndexedDB successful
-      window.___DROPPR___.fileStore.addEventListener("open", async () => {
-        await window.___DROPPR___.fileStore.clear((progress) => {
-          console.log("Cleaning up... " + `${progress}%`);
-        });
-        root.render(<RouterProvider router={router} />); // start droppr
-      });
-
-      // connection to IndexedDB not successful
-      window.___DROPPR___.fileStore.addEventListener("openerror", (event) => {
-        console.log("Error in index.js: " + event.target.error.toString());
-        window.___DROPPR___.fileStore = null; // can't receive files, but can *try* to drop
-        root.render(<RouterProvider router={router} />); // start droppr
-      });
-    } catch (err) {
-      console.log("Error in index.js: " + err.toString());
-      // reset window.___DROPPR___ incase error thrown from that
-      window.___DROPPR___ = {
-        dropper: null,
-        receiver: null,
-        fileStore: null, // probably can't receive files, but can *try* to drop
-      };
-      root.render(<RouterProvider router={router} />); // start droppr
-    }
-  }
+  root.render(<RouterProvider router={router} />); // start droppr
 };
 
 start();

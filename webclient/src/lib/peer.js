@@ -1,4 +1,4 @@
-import { SignalChannel } from "./SignalChannel.js";
+import { SignalChannel } from "./signal_channel.js";
 
 /**
  * @typedef {Object} SignalChannelMessage

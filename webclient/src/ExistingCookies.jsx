@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import { errorToString } from "./core";
+import { errorToString } from "./lib";
 
 export function ExistingCookies() {
   const onContinue = async () => {

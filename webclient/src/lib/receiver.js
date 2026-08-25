@@ -1,5 +1,6 @@
-import { Peer } from "./Peer.js";
-import { FileStore } from "./FileStore.js";
+import axios from "axios";
+import { Peer } from "./peer.js";
+import { FileStore, getFileStore } from "./file_store.js";
 
 /**
  * dispatches error, connected, disconnected, processing, cleanup, done
@@ -7,6 +8,7 @@ import { FileStore } from "./FileStore.js";
  */
 export class Receiver extends EventTarget {
   _peer = null;
+  _fileStore = null;
   file = {
     name: "tmp.bin",
     size: 0,
@@ -24,14 +26,17 @@ export class Receiver extends EventTarget {
    * @param {string} file.type
    * @param {string} [file.href]
    */
-  constructor(file) {
+  constructor(file, fileStore) {
     super(); // EventTarget
 
     this.file = file;
 
-    if (window.showSaveFilePicker) {
+    if (fileStore === null) {
+      // Chromium-based browsers; use the File System Access API
       this._fileSystemAccessApiLoop();
-    } else if (window.___DROPPR___.fileStore instanceof FileStore) {
+    } else if (fileStore instanceof FileStore && fileStore.error === null) {
+      // non-Chromium browsers; use IndexedDB
+      this._fileStore = fileStore;
       this._indexedDbLoop();
     } else {
       // terribly outdated browsers
@@ -91,7 +96,7 @@ export class Receiver extends EventTarget {
       /**
        * @type {FileStore}
        */
-      const fileStore = window.___DROPPR___.fileStore;
+      const fileStore = this._fileStore;
       this._peer = new Peer(false);
 
       // for UI informative purposes; peer will handle reconnection internally
@@ -154,4 +159,29 @@ export class Receiver extends EventTarget {
       this.dispatchEvent(new Event("error"));
     }
   }
+}
+
+// singleton
+let receiver = null;
+
+/**
+ * @param {string} code
+ * @param {(receiver: Receiver) => void} addEventListeners
+ * @returns {Promise<Receiver>}
+ */
+export async function receiveFile(code, addEventListeners) {
+  if (receiver !== null) {
+    return receiver;
+  }
+
+  // if this errors, it will bubble up
+  const fileStore = await getFileStore();
+
+  // will throw an error if the drop was not able to be claimed
+  const res = await axios.post("/api/claim/" + code.toUpperCase());
+  const file = res.data.file;
+
+  receiver = new Receiver(file, fileStore);
+  addEventListeners(receiver);
+  return receiver;
 }

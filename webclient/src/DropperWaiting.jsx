@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCopy, faCheck } from "@fortawesome/free-solid-svg-icons";
 
 import { AppWindow } from "./components";
-import { bytesToString } from "./core";
+import { bytesToString } from "./lib";
 
 /**
  * @param {object} props
