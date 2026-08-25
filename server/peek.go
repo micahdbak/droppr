@@ -13,11 +13,11 @@ import (
 
 // Peeks at the fileinfo for a drop
 func servePeek(w http.ResponseWriter, r *http.Request) {
-	setCORS(&w)
+	setCORS(w)
 
 	// ensure GET request
 	if r.Method != http.MethodGet {
-		writeHTTPError(&w, http.StatusBadRequest) // 400
+		writeHTTPError(w, http.StatusBadRequest) // 400
 		return
 	}
 
@@ -25,14 +25,14 @@ func servePeek(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Path[10:] // /api/peek/:code
 	matches, err := regexp.Match("^([A-Z0-9]{6,6})$", []byte(code))
 	if err != nil || !matches {
-		writeHTTPError(&w, http.StatusBadRequest) // 400
+		writeHTTPError(w, http.StatusBadRequest) // 400
 		return
 	}
 
 	file, _, err := selectDropWithCode(code)
 	if err != nil {
 		logWarning(r, "%v", err)
-		writeHTTPError(&w, http.StatusNotFound) // 404
+		writeHTTPError(w, http.StatusNotFound) // 404
 		return
 	}
 
@@ -40,7 +40,7 @@ func servePeek(w http.ResponseWriter, r *http.Request) {
 	file_json, err := json.Marshal(file)
 	if err != nil {
 		logError(r, "%v", err)
-		writeHTTPError(&w, http.StatusInternalServerError) // 500
+		writeHTTPError(w, http.StatusInternalServerError) // 500
 		return
 	}
 

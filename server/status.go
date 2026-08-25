@@ -1,4 +1,4 @@
-// check.go
+// status.go
 
 package main
 
@@ -11,11 +11,11 @@ import (
 
 // Checks the status of the entire website
 func serveStatus(w http.ResponseWriter, r *http.Request) {
-	setCORS(&w)
+	setCORS(w)
 
 	// ensure GET request
 	if r.Method != http.MethodGet {
-		writeHTTPError(&w, http.StatusBadRequest) // 400
+		writeHTTPError(w, http.StatusBadRequest) // 400
 		return
 	}
 
@@ -28,6 +28,5 @@ func serveStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s := fmt.Sprintf("{\"drops\": %d}", numDrops)
-	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(s))
 }

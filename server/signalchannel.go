@@ -86,13 +86,13 @@ var (
 
 // Upgrades an authorized request to a signal channel (WebSocket connection)
 func serveSignalChannel(w http.ResponseWriter, r *http.Request) {
-	setCORS(&w)
+	setCORS(w)
 
 	// get drop ID and role from cookies
 	id, role := getSessionFromCookies(r)
 	if len(id) == 0 || len(role) == 0 {
 		logWarning(r, "%v", fmt.Errorf("invalid session"))
-		writeHTTPError(&w, http.StatusUnauthorized)
+		writeHTTPError(w, http.StatusUnauthorized)
 		return
 	}
 

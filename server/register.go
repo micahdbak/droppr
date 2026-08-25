@@ -69,11 +69,11 @@ func insertDrop(file File) (string, string, error) {
 
 // Registers a drop
 func serveRegister(w http.ResponseWriter, r *http.Request) {
-	setCORS(&w)
+	setCORS(w)
 
 	// ensure POST request
 	if r.Method != http.MethodPost {
-		writeHTTPError(&w, http.StatusBadRequest)
+		writeHTTPError(w, http.StatusBadRequest)
 		return
 	}
 
@@ -83,7 +83,7 @@ func serveRegister(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// might fail if r.Body isn't JSON
 		logWarning(r, "%v", err)
-		writeHTTPError(&w, http.StatusBadRequest)
+		writeHTTPError(w, http.StatusBadRequest)
 		return
 	}
 
@@ -92,7 +92,7 @@ func serveRegister(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// will error if couldn't generate a free drop code
 		logError(r, "%v", err)
-		writeHTTPError(&w, http.StatusInternalServerError)
+		writeHTTPError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -102,7 +102,7 @@ func serveRegister(w http.ResponseWriter, r *http.Request) {
 		// would be really strange if this happened, as the drop ID was just generated,
 		// and no client should have it yet. I.e., failure on session already existing.
 		logError(r, "%v", err)
-		writeHTTPError(&w, http.StatusInternalServerError)
+		writeHTTPError(w, http.StatusInternalServerError)
 		return
 	}
 

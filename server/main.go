@@ -15,11 +15,9 @@ import (
 // shared database connection
 var db *pgxpool.Pool
 
-func init() {
-	signalChannels = make(map[string]*signalChannel)
-}
-
 func main() {
+	signalChannels = make(map[string]*signalChannel)
+
 	logPlain("~~ droppr server ~~")
 
 	// connect to database

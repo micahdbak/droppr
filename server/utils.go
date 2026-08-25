@@ -20,15 +20,15 @@ type File struct {
 // ----------------------------------------------------------------
 
 // set necessary CORS header(s) in HTTP response
-func setCORS(w *http.ResponseWriter) {
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+func setCORS(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 }
 
 // ----------------------------------------------------------------
 
 // performs http.Error with http.StatusText(code)
-func writeHTTPError(w *http.ResponseWriter, code int) {
-	http.Error(*w, http.StatusText(code), code)
+func writeHTTPError(w http.ResponseWriter, code int) {
+	http.Error(w, http.StatusText(code), code)
 }
 
 // ----------------------------------------------------------------
@@ -104,11 +104,7 @@ func insertSession(dropId string, dropRole string) error {
 		dropId,
 		dropRole,
 	)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // ----------------------------------------------------------------

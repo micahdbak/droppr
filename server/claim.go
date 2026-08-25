@@ -14,11 +14,11 @@ import (
 
 // Claims a drop
 func serveClaim(w http.ResponseWriter, r *http.Request) {
-	setCORS(&w)
+	setCORS(w)
 
 	// ensure POST request
 	if r.Method != http.MethodPost {
-		writeHTTPError(&w, http.StatusBadRequest) // 400
+		writeHTTPError(w, http.StatusBadRequest) // 400
 		return
 	}
 
@@ -26,7 +26,7 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Path[11:] // /api/claim/:code
 	matches, err := regexp.Match("^([A-Z0-9]{6,6})$", []byte(code))
 	if err != nil || !matches {
-		writeHTTPError(&w, http.StatusBadRequest) // 400
+		writeHTTPError(w, http.StatusBadRequest) // 400
 		return
 	}
 
@@ -35,7 +35,7 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 	file, id, err := selectDropWithCode(code)
 	if err != nil {
 		logError(r, "%v", err)
-		writeHTTPError(&w, http.StatusNotFound) // 404
+		writeHTTPError(w, http.StatusNotFound) // 404
 		return
 	}
 
@@ -43,7 +43,7 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 	file_json, err := json.Marshal(file)
 	if err != nil {
 		logError(r, "%v", err)
-		writeHTTPError(&w, http.StatusInternalServerError) // 500
+		writeHTTPError(w, http.StatusInternalServerError) // 500
 		return
 	}
 	file_s := fmt.Sprintf("{\"file\":%s}", file_json)
@@ -62,7 +62,7 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// someone claimed the request already; pretend it doesn't exist
 		logWarning(r, "%v", err)
-		writeHTTPError(&w, http.StatusNotFound) // 404
+		writeHTTPError(w, http.StatusNotFound) // 404
 		return
 	}
 

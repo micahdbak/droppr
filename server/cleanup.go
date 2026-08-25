@@ -23,10 +23,10 @@ func completeDrop(dropId string) error {
 
 // Clean up cookies
 func serveCleanup(w http.ResponseWriter, r *http.Request) {
-	setCORS(&w)
+	setCORS(w)
 
 	if r.Method != http.MethodPost {
-		writeHTTPError(&w, http.StatusBadRequest)
+		writeHTTPError(w, http.StatusBadRequest)
 		return
 	}
 
