@@ -1,5 +1,5 @@
 import { AppWindow } from "./components";
-import { bytesToString, secondsToString } from "./core";
+import { bytesToString, secondsToString } from "./lib";
 
 export function Success() {
   let isDropper = sessionStorage.getItem("isDropper");

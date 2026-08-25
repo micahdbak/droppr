@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-import { Dropper, errorToString } from "./core";
+import { dropFile, errorToString } from "./lib";
 import { DropperWaiting } from "./DropperWaiting.jsx";
 import { DropperTransfer } from "./DropperTransfer.jsx";
 import { SpinningWheel } from "./SpinningWheel.jsx";
@@ -22,74 +22,74 @@ export function DropperContainer(props) {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [state, setState] = useState(STATE_WAITING);
 
+  const addEventListeners = (dropper) => {
+    let checkDropperInterval = null;
+
+    dropper.addEventListener("error", () => {
+      sessionStorage.setItem("error", errorToString(dropper.error));
+
+      // go to ShowError.jsx
+      window.location.href = window.location.origin + "/#error";
+      window.location.reload();
+    });
+
+    dropper.addEventListener("connected", () => {
+      setState(STATE_TRANSFER);
+      const startTime = Date.now(); // for checkDropperInterval
+
+      checkDropperInterval = setInterval(() => {
+        const _bytesSent = dropper.bytesSent;
+        setBytesSent(_bytesSent);
+
+        const msElapsed = Date.now() - startTime;
+        const elapsedSeconds = msElapsed / 1000;
+        const avgSecondsPerByte = elapsedSeconds / _bytesSent;
+        setRemainingSeconds(
+          Math.ceil((file.size - _bytesSent) * avgSecondsPerByte),
+        );
+
+        // for Success.jsx
+        sessionStorage.setItem(
+          "elapsedSeconds",
+          JSON.stringify(Math.ceil(elapsedSeconds)),
+        );
+      }, 100); // 100ms
+    });
+
+    dropper.addEventListener("disconnected", () => {
+      clearInterval(checkDropperInterval);
+      setState(STATE_CONNECTING);
+      // will reconnect automatically
+    });
+
+    dropper.addEventListener("done", async () => {
+      clearInterval(checkDropperInterval);
+      await axios.post("/api/cleanup");
+
+      // go to Success.jsx
+      window.location.href = window.location.origin + "/#success";
+      window.location.reload();
+    });
+  };
+
   useEffect(() => {
-    if (window.___DROPPR___.dropper === null) {
-      // for Success.jsx
-      sessionStorage.setItem("isDropper", "true");
-      sessionStorage.setItem("totalSize", file.size.toString());
-      sessionStorage.setItem("fileName", file.name);
+    // for Success.jsx
+    sessionStorage.setItem("isDropper", "true");
+    sessionStorage.setItem("totalSize", file.size.toString());
+    sessionStorage.setItem("fileName", file.name);
 
-      try {
-        // create a new Dropper object
-        const dropper = new Dropper(file);
-        window.___DROPPR___.dropper = dropper;
-        let checkDropperInterval = null;
+    try {
+      // returns a singleton; safe to re-call
+      dropFile(file, addEventListeners);
+    } catch (err) {
+      sessionStorage.setItem("error", errorToString(err));
 
-        dropper.addEventListener("error", () => {
-          sessionStorage.setItem("error", errorToString(dropper.error));
-
-          // go to ShowError.jsx
-          window.location.href = window.location.origin + "/#error";
-          window.location.reload();
-        });
-
-        dropper.addEventListener("connected", () => {
-          setState(STATE_TRANSFER);
-          const startTime = Date.now(); // for checkDropperInterval
-
-          checkDropperInterval = setInterval(() => {
-            const _bytesSent = dropper.bytesSent;
-            setBytesSent(_bytesSent);
-
-            const msElapsed = Date.now() - startTime;
-            const elapsedSeconds = msElapsed / 1000;
-            const avgSecondsPerByte = elapsedSeconds / _bytesSent;
-            setRemainingSeconds(
-              Math.ceil((file.size - _bytesSent) * avgSecondsPerByte),
-            );
-
-            // for Success.jsx
-            sessionStorage.setItem(
-              "elapsedSeconds",
-              JSON.stringify(Math.ceil(elapsedSeconds)),
-            );
-          }, 100); // 100ms
-        });
-
-        dropper.addEventListener("disconnected", () => {
-          clearInterval(checkDropperInterval);
-          setState(STATE_CONNECTING);
-          // will reconnect automatically
-        });
-
-        dropper.addEventListener("done", async () => {
-          clearInterval(checkDropperInterval);
-          await axios.post("/api/cleanup");
-
-          // go to Success.jsx
-          window.location.href = window.location.origin + "/#success";
-          window.location.reload();
-        });
-      } catch (err) {
-        sessionStorage.setItem("error", errorToString(err));
-
-        // go to ShowError.jsx
-        window.location.href = window.location.origin + "/#error";
-        window.location.reload();
-      }
+      // go to ShowError.jsx
+      window.location.href = window.location.origin + "/#error";
+      window.location.reload();
     }
 
-    // NOTE: this intionally captures initial values, and only runs on mount
+    // NOTE: this intentionally captures initial values, and only runs on mount
     // hence, the dependency array is empty; so, disable the eslint warn
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

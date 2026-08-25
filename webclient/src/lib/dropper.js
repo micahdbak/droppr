@@ -1,4 +1,4 @@
-import { Peer } from "./Peer.js";
+import { Peer } from "./peer.js";
 
 const MESSAGE_SIZE = 16384;
 
@@ -64,4 +64,22 @@ export class Dropper extends EventTarget {
       this.dispatchEvent(new Event("error"));
     }
   }
+}
+
+// singleton
+let dropper = null;
+
+/**
+ * @param {File} file
+ * @param {(dropper: Dropper) => void} addEventListeners
+ * @returns {Dropper}
+ */
+export function dropFile(file, addEventListeners) {
+  if (dropper !== null) {
+    return dropper;
+  }
+
+  dropper = new Dropper(file);
+  addEventListeners(dropper);
+  return dropper;
 }

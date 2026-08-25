@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-import { bytesToString, errorToString } from "./core";
+import { bytesToString, errorToString } from "./lib";
 import { AppWindow } from "./components";
 
 /**
