@@ -26,5 +26,5 @@ func servePeek(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, FileResponse{File: file})
+	writeJSON(w, http.StatusOK, map[string]File{"file": file})
 }

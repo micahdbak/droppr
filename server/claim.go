@@ -3,8 +3,6 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -31,21 +29,11 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// prepare file info response data
-	file_json, err := json.Marshal(file)
-	if err != nil {
-		slog.Error("failed to marshal file json", "error", err)
-		writeHTTPError(w, http.StatusInternalServerError) // 500
-		return
-	}
-	file_s := fmt.Sprintf("{\"file\":%s}", file_json)
-
 	// double check that the requester hasn't claimed this drop already
 	id_, role := getSessionFromCookies(r)
 	if id == id_ && role == "receiver" {
 		// if yes, just provide file info to requester and move on
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(file_s))
+		writeJSON(w, http.StatusOK, map[string]File{"file": file})
 		return
 	}
 
@@ -67,7 +55,7 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	// set the drop_id cookie
+	// set the drop_role cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "drop_role",
 		Value:    "receiver",
@@ -77,7 +65,6 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// provide file info to requester
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(file_s))
+	writeJSON(w, http.StatusOK, map[string]File{"file": file})
 	slog.Info("claimed drop", "drop_id", id, "code", code)
 }

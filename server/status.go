@@ -3,7 +3,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 )
 
@@ -13,14 +12,11 @@ import (
 func serveStatus(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 
-	w.Header().Set("Content-Type", "application/json")
-
 	numDrops, err := selectNumDropsComplete()
 	if err != nil {
-		w.Write([]byte("{\"drops\": 0}"))
+		writeJSON(w, http.StatusOK, map[string]int64{"drops": 0})
 		return
 	}
 
-	s := fmt.Sprintf("{\"drops\": %d}", numDrops)
-	w.Write([]byte(s))
+	writeJSON(w, http.StatusOK, map[string]int64{"drops": numDrops})
 }

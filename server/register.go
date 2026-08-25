@@ -126,9 +126,6 @@ func serveRegister(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	// response body has JSON object with drop_code
-	s := fmt.Sprintf("{\"drop_code\":\"%s\"}", code)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(s))
+	writeJSON(w, http.StatusOK, map[string]string{"drop_code": code})
 	slog.Info("registered drop", "drop_id", id, "code", code)
 }

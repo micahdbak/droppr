@@ -4,6 +4,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"log/slog"
 	"net/http"
 	"regexp"
 )
@@ -32,6 +34,17 @@ func setCORS(w http.ResponseWriter) {
 // performs http.Error with http.StatusText(code)
 func writeHTTPError(w http.ResponseWriter, code int) {
 	http.Error(w, http.StatusText(code), code)
+}
+
+// ----------------------------------------------------------------
+
+// writes a JSON response with the given status code
+func writeJSON(w http.ResponseWriter, status int, data any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		slog.Error("failed to encode json response", "error", err)
+	}
 }
 
 
