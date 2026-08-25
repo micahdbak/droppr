@@ -4,11 +4,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"server/signaling"
 
@@ -19,20 +22,23 @@ import (
 var db *pgxpool.Pool
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	hub := signaling.NewHub()
 
 	slog.Info("~~ droppr server ~~")
 
 	// connect to database
 	var err error
-	db, err = pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	db, err = pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
 		panic(fmt.Sprintf("%v", err))
 	}
 	defer db.Close()
 
 	// do a test query to make sure the db connection is live and good
-	row := db.QueryRow(context.Background(), "SELECT 'Hello from postgres!'::text AS text")
+	row := db.QueryRow(ctx, "SELECT 'Hello from postgres!'::text AS text")
 	var dbText string
 	err = row.Scan(&dbText)
 	if err != nil {
@@ -58,5 +64,28 @@ func main() {
 		hub.ServeWebSocket(w, r, id, role)
 	})
 
-	log.Fatal(http.ListenAndServe(":5050", mux))
+	srv := &http.Server{
+		Addr:    ":5050",
+		Handler: mux,
+	}
+
+	go func() {
+		slog.Info("server listening", "addr", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("server failed to start/listen", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-ctx.Done()
+	slog.Info("shutting down server gracefully...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("server forced to shutdown", "error", err)
+	} else {
+		slog.Info("server stopped gracefully")
+	}
 }
