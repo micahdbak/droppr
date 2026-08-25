@@ -72,9 +72,9 @@ func getSessionFromCookies(r *http.Request) (string, string) {
 // ----------------------------------------------------------------
 
 // insert a row into sessions with the provided drop ID and role, returning the session token
-func insertSession(dropId string, dropRole string) error {
+func insertSession(ctx context.Context, dropId string, dropRole string) error {
 	_, err := db.Exec(
-		context.Background(),
+		ctx,
 		"INSERT INTO sessions(drop_id, drop_role) VALUES ($1, $2)",
 		dropId,
 		dropRole,
@@ -85,9 +85,9 @@ func insertSession(dropId string, dropRole string) error {
 // ----------------------------------------------------------------
 
 // select the drop id
-func selectDropWithCode(code string) (File, string, error) {
+func selectDropWithCode(ctx context.Context, code string) (File, string, error) {
 	row := db.QueryRow(
-		context.Background(),
+		ctx,
 		"SELECT id, file_name, file_size, file_type FROM drops WHERE code = $1 AND is_complete = 'f'",
 		code,
 	)
@@ -109,9 +109,9 @@ func selectDropWithCode(code string) (File, string, error) {
 // ----------------------------------------------------------------
 
 // select the drop id
-func selectNumDropsComplete() (int64, error) {
+func selectNumDropsComplete(ctx context.Context) (int64, error) {
 	row := db.QueryRow(
-		context.Background(),
+		ctx,
 		"SELECT COUNT(*) FROM drops WHERE is_complete='t'",
 	)
 

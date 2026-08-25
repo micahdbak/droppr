@@ -37,7 +37,7 @@ func generateDropCode() (string, error) {
 // ----------------------------------------------------------------
 
 // insert a row in the drops table with file information, returning the generated drop ID and code
-func insertDrop(file File) (string, string, error) {
+func insertDrop(ctx context.Context, file File) (string, string, error) {
 	// lest we enter an infinite loop, attempt this for a maximum of 5 tries
 	for ctr := 0; ctr < 5; ctr++ {
 		// generate a drop code to attempt inserting a row with
@@ -47,7 +47,7 @@ func insertDrop(file File) (string, string, error) {
 		}
 
 		row := db.QueryRow(
-			context.Background(),
+			ctx,
 			"INSERT INTO drops(code, file_name, file_size, file_type) VALUES ($1, $2, $3, $4) RETURNING id",
 			code,
 			file.Name,
@@ -90,7 +90,7 @@ func serveRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// insert a drop row given the file information
-	id, code, err := insertDrop(file)
+	id, code, err := insertDrop(r.Context(), file)
 	if err != nil {
 		// will error if couldn't generate a free drop code
 		slog.Error("failed to generate/insert drop", "error", err)
@@ -99,7 +99,7 @@ func serveRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// generate a new session row for this drop
-	err = insertSession(id, "dropper")
+	err = insertSession(r.Context(), id, "dropper")
 	if err != nil {
 		// would be really strange if this happened, as the drop ID was just generated,
 		// and no client should have it yet. I.e., failure on session already existing.

@@ -22,7 +22,7 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 
 	// get file information and drop ID given the drop code
 	// will error if no incomplete drop exists for the code given
-	file, id, err := selectDropWithCode(code)
+	file, id, err := selectDropWithCode(r.Context(), code)
 	if err != nil {
 		slog.Error("failed to find drop with code", "code", code, "error", err)
 		writeHTTPError(w, http.StatusNotFound) // 404
@@ -38,7 +38,7 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// insert new session for the request
-	err = insertSession(id, "receiver")
+	err = insertSession(r.Context(), id, "receiver")
 	if err != nil {
 		// someone claimed the request already; pretend it doesn't exist
 		slog.Warn("failed to claim drop; already claimed", "drop_id", id, "error", err)

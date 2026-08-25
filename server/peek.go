@@ -19,7 +19,7 @@ func servePeek(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, _, err := selectDropWithCode(code)
+	file, _, err := selectDropWithCode(r.Context(), code)
 	if err != nil {
 		slog.Warn("drop not found for peek", "code", code, "error", err)
 		writeHTTPError(w, http.StatusNotFound) // 404
