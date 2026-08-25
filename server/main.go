@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"os"
 
+	"server/signaling"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -17,7 +19,7 @@ import (
 var db *pgxpool.Pool
 
 func main() {
-	signalChannels = make(map[string]*signalChannel)
+	hub := signaling.NewHub()
 
 	slog.Info("~~ droppr server ~~")
 
@@ -45,7 +47,16 @@ func main() {
 	mux.HandleFunc("GET /api/peek/{code}", servePeek)
 	mux.HandleFunc("POST /api/register", serveRegister)
 	mux.HandleFunc("GET /api/status", serveStatus)
-	mux.HandleFunc("GET /sc", serveSignalChannel)
+	mux.HandleFunc("GET /sc", func(w http.ResponseWriter, r *http.Request) {
+		setCORS(w)
+		id, role := getSessionFromCookies(r)
+		if len(id) == 0 || len(role) == 0 {
+			slog.Warn("invalid session in signal channel request")
+			writeHTTPError(w, http.StatusUnauthorized)
+			return
+		}
+		hub.ServeWebSocket(w, r, id, role)
+	})
 
 	log.Fatal(http.ListenAndServe(":5050", mux))
 }
