@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -53,10 +54,10 @@ func serveCleanup(w http.ResponseWriter, r *http.Request) {
 	id, _ := getSessionFromCookies(r)
 	if len(id) > 0 {
 		if err := completeDrop(id); err != nil {
-			logWarning(r, "%v", err)
+			slog.Warn("failed to mark drop complete during cleanup", "drop_id", id, "error", err)
 			// don't report this error to the requester; as far as they are concerned, the cookies were deleted properly
 		} else {
-			logInfo(r, "completed drop %s", id)
+			slog.Info("completed drop", "drop_id", id)
 		}
 	}
 }

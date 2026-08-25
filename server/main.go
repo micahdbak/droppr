@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -18,7 +19,7 @@ var db *pgxpool.Pool
 func main() {
 	signalChannels = make(map[string]*signalChannel)
 
-	logPlain("~~ droppr server ~~")
+	slog.Info("~~ droppr server ~~")
 
 	// connect to database
 	var err error
@@ -35,7 +36,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("%v", err))
 	}
-	logPlain("%s", dbText)
+	slog.Info("database connection established", "db_response", dbText)
 
 	http.HandleFunc("/api/check", serveCheck)
 	http.HandleFunc("/api/claim/", serveClaim)

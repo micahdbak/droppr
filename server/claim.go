@@ -5,6 +5,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"time"
@@ -34,7 +35,7 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 	// will error if no incomplete drop exists for the code given
 	file, id, err := selectDropWithCode(code)
 	if err != nil {
-		logError(r, "%v", err)
+		slog.Error("failed to find drop with code", "code", code, "error", err)
 		writeHTTPError(w, http.StatusNotFound) // 404
 		return
 	}
@@ -42,7 +43,7 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 	// prepare file info response data
 	file_json, err := json.Marshal(file)
 	if err != nil {
-		logError(r, "%v", err)
+		slog.Error("failed to marshal file json", "error", err)
 		writeHTTPError(w, http.StatusInternalServerError) // 500
 		return
 	}
@@ -61,7 +62,7 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 	err = insertSession(id, "receiver")
 	if err != nil {
 		// someone claimed the request already; pretend it doesn't exist
-		logWarning(r, "%v", err)
+		slog.Warn("failed to claim drop; already claimed", "drop_id", id, "error", err)
 		writeHTTPError(w, http.StatusNotFound) // 404
 		return
 	}
@@ -87,5 +88,5 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 	// provide file info to requester
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(file_s))
-	logInfo(r, "claimed drop %s", id)
+	slog.Info("claimed drop", "drop_id", id, "code", code)
 }

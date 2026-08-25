@@ -5,6 +5,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"regexp"
 )
@@ -31,7 +32,7 @@ func servePeek(w http.ResponseWriter, r *http.Request) {
 
 	file, _, err := selectDropWithCode(code)
 	if err != nil {
-		logWarning(r, "%v", err)
+		slog.Warn("drop not found for peek", "code", code, "error", err)
 		writeHTTPError(w, http.StatusNotFound) // 404
 		return
 	}
@@ -39,7 +40,7 @@ func servePeek(w http.ResponseWriter, r *http.Request) {
 	// convert file to JSON byte array
 	file_json, err := json.Marshal(file)
 	if err != nil {
-		logError(r, "%v", err)
+		slog.Error("failed to marshal file json", "error", err)
 		writeHTTPError(w, http.StatusInternalServerError) // 500
 		return
 	}

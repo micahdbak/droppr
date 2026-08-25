@@ -4,9 +4,7 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"time"
 )
 
 // ----------------------------------------------------------------
@@ -31,48 +29,7 @@ func writeHTTPError(w http.ResponseWriter, code int) {
 	http.Error(w, http.StatusText(code), code)
 }
 
-// ----------------------------------------------------------------
 
-func logPlain(format string, a ...any) {
-	var arglist []any
-	arglist = append(arglist, time.Now().Format("2006-01-02 15:04:05"))
-	arglist = append(arglist, a...)
-
-	fmt.Printf("%s: "+format+"\n", arglist...)
-}
-
-// ----------------------------------------------------------------
-
-func logInfo(r *http.Request, format string, a ...any) {
-	var arglist []any
-	arglist = append(arglist, time.Now().Format("2006-01-02 15:04:05"))
-	arglist = append(arglist, r.URL.Path)
-	arglist = append(arglist, a...)
-
-	fmt.Printf("%s: [Info] in request to %s: "+format+"\n", arglist...)
-}
-
-// ----------------------------------------------------------------
-
-func logWarning(r *http.Request, format string, a ...any) {
-	var arglist []any
-	arglist = append(arglist, time.Now().Format("2006-01-02 15:04:05"))
-	arglist = append(arglist, r.URL.Path)
-	arglist = append(arglist, a...)
-
-	fmt.Printf("%s: [Warning] in request to %s: "+format+"\n", arglist...)
-}
-
-// ----------------------------------------------------------------
-
-func logError(r *http.Request, format string, a ...any) {
-	var arglist []any
-	arglist = append(arglist, time.Now().Format("2006-01-02 15:04:05"))
-	arglist = append(arglist, r.URL.Path)
-	arglist = append(arglist, a...)
-
-	fmt.Printf("%s: [Error] in request to %s: "+format+"\n", arglist...)
-}
 
 // ----------------------------------------------------------------
 

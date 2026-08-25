@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -91,7 +92,7 @@ func serveSignalChannel(w http.ResponseWriter, r *http.Request) {
 	// get drop ID and role from cookies
 	id, role := getSessionFromCookies(r)
 	if len(id) == 0 || len(role) == 0 {
-		logWarning(r, "%v", fmt.Errorf("invalid session"))
+		slog.Warn("invalid session in signal channel request")
 		writeHTTPError(w, http.StatusUnauthorized)
 		return
 	}
@@ -99,7 +100,7 @@ func serveSignalChannel(w http.ResponseWriter, r *http.Request) {
 	// upgrade request to a WebSocket connection
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		logError(r, "%v", err)
+		slog.Error("failed to upgrade websocket connection", "error", err)
 		return
 	}
 	defer conn.Close() // good to be safe
@@ -118,7 +119,7 @@ func serveSignalChannel(w http.ResponseWriter, r *http.Request) {
 	connected := sc.Connect(role, conn)
 	if !connected {
 		conn.WriteMessage(ws.TextMessage, []byte("{\"status\":\"busy\"}"))
-		logError(r, "%s already connected", role)
+		slog.Error("peer role already connected", "role", role, "drop_id", id)
 		return
 	}
 	defer sc.Disconnect(role)
@@ -134,11 +135,11 @@ func serveSignalChannel(w http.ResponseWriter, r *http.Request) {
 		// attempt to send message to peer
 		if role == "dropper" && sc.Receiver != nil {
 			if err = sc.Receiver.WriteMessage(t, msg); err != nil {
-				logWarning(r, "%v", err)
+				slog.Warn("failed to write message to receiver", "error", err)
 			}
 		} else if role == "receiver" && sc.Dropper != nil {
 			if err = sc.Dropper.WriteMessage(t, msg); err != nil {
-				logWarning(r, "%v", err)
+				slog.Warn("failed to write message to dropper", "error", err)
 			}
 		} else {
 			// peer isn't connected, fail the message
