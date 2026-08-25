@@ -1,0 +1,7 @@
+dist/
+.vite/
+node_modules/
+
+public/tailwind.css
+
+bun.lock

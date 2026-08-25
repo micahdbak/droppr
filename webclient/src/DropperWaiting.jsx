@@ -1,11 +1,9 @@
-// DropperWaiting.jsx
+import { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCopy, faCheck } from "@fortawesome/free-solid-svg-icons";
 
-import React, { useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCopy, faCheck, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
-
-import { AppWindow } from './components';
-import { bytesToString } from './core';
+import { AppWindow } from "./components";
+import { bytesToString } from "./core";
 
 /**
  * @param {object} props
@@ -37,10 +35,12 @@ export function DropperWaiting(props) {
   return (
     <AppWindow>
       <img src="/hourglass.gif" className="w-full h-20 mb-4 object-contain" />
-      
+
       <p className="text-xl mb-1">Your drop code is:</p>
       <p className="text-6xl font-mono bg-gray-200 px-2 rounded-lg">{code}</p>
-      <p className="text-xs mb-4 text-gray-500">{bytesToString(totalSize)}, {fileName}</p>
+      <p className="text-xs mb-4 text-gray-500">
+        {bytesToString(totalSize)}, {fileName}
+      </p>
 
       <div className="flex flex-row gap-2 mb-4">
         <input
@@ -53,7 +53,11 @@ export function DropperWaiting(props) {
         {downloadLinkCopied ? (
           <FontAwesomeIcon icon={faCheck} />
         ) : (
-          <FontAwesomeIcon className="cursor-pointer" icon={faCopy} onClick={copyDownloadLink} />
+          <FontAwesomeIcon
+            className="cursor-pointer"
+            icon={faCopy}
+            onClick={copyDownloadLink}
+          />
         )}
       </div>
     </AppWindow>

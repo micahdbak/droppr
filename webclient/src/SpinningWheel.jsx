@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
-import { AppWindow } from './components';
+import { AppWindow } from "./components";
 
 export function SpinningWheel() {
   const [degree, setDegree] = useState(0);
@@ -27,7 +27,7 @@ export function SpinningWheel() {
         <img
           style={{
             transform: `rotate(${degree}deg)`,
-            opacity: '0.75'
+            opacity: "0.75",
           }}
           src="/spinner.svg"
           width="32"

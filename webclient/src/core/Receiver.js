@@ -1,33 +1,28 @@
-// Receiver.js
-
-import { Peer } from './Peer.js';
-import { FileStore } from './FileStore.js';
-
-
+import { Peer } from "./Peer.js";
+import { FileStore } from "./FileStore.js";
 
 /**
  * dispatches error, connected, disconnected, processing, cleanup, done
  * @extends EventTarget
  */
 export class Receiver extends EventTarget {
-
-
-
   _peer = null;
   file = {
-    name: 'tmp.bin',
+    name: "tmp.bin",
     size: 0,
-    type: 'application/octet-stream',
-    href: ''
+    type: "application/octet-stream",
+    href: "",
   }; // information on the file being received
-  bytesReceived      = 0; // number of bytes received from the peer
+  bytesReceived = 0; // number of bytes received from the peer
   processingProgress = 0; // progress of processing file, from 0 to 100
   error = null;
 
-
-
   /**
-   * @param {File} file - information on the file to receive
+   * @param {object} file - information on the file to receive
+   * @param {string} file.name
+   * @param {number} file.size
+   * @param {string} file.type
+   * @param {string} [file.href]
    */
   constructor(file) {
     super(); // EventTarget
@@ -40,11 +35,9 @@ export class Receiver extends EventTarget {
       this._indexedDbLoop();
     } else {
       // terribly outdated browsers
-      throw new Error('incompatible browser');
+      throw new Error("incompatible browser");
     }
   }
-
-
 
   /**
    * receive a file for Chromium-based browsers
@@ -53,18 +46,22 @@ export class Receiver extends EventTarget {
     try {
       // prompt the user to choose a download location
       const fileHandle = await window.showSaveFilePicker({
-        suggestedName: this.file.name
+        suggestedName: this.file.name,
       });
       const writableStream = await fileHandle.createWritable();
       this._peer = new Peer(false);
 
       // for UI informative purposes; peer will handle reconnection internally
-      this._peer.addEventListener('error', (event) => {
-        this.error = new Error('peer error', { cause: event.target.error });
-        this.dispatchEvent(new Event('error'));
+      this._peer.addEventListener("error", (event) => {
+        this.error = new Error("peer error", { cause: event.target.error });
+        this.dispatchEvent(new Event("error"));
       });
-      this._peer.addEventListener('connected', () => this.dispatchEvent(new Event('connected')));
-      this._peer.addEventListener('disconnected', () => this.dispatchEvent(new Event('disconnected')));
+      this._peer.addEventListener("connected", () =>
+        this.dispatchEvent(new Event("connected")),
+      );
+      this._peer.addEventListener("disconnected", () =>
+        this.dispatchEvent(new Event("disconnected")),
+      );
 
       while (this.bytesReceived < this.file.size) {
         // if not connected, this will block until connected
@@ -78,15 +75,13 @@ export class Receiver extends EventTarget {
       // no more blobs to receive; clean up
       this._peer.close();
       await writableStream.close();
-      this.dispatchEvent(new Event('done'));
+      this.dispatchEvent(new Event("done"));
     } catch (err) {
       this._peer?.close();
       this.error = err;
-      this.dispatchEvent(new Event('error'));
+      this.dispatchEvent(new Event("error"));
     }
   }
-
-
 
   /**
    * receive a file for non-Chromium-based browsers
@@ -100,12 +95,16 @@ export class Receiver extends EventTarget {
       this._peer = new Peer(false);
 
       // for UI informative purposes; peer will handle reconnection internally
-      this._peer.addEventListener('error', (event) => {
-        this.error = new Error('peer error', { cause: event.target.error });
-        this.dispatchEvent(new Event('error'));
+      this._peer.addEventListener("error", (event) => {
+        this.error = new Error("peer error", { cause: event.target.error });
+        this.dispatchEvent(new Event("error"));
       });
-      this._peer.addEventListener('connected', () => this.dispatchEvent(new Event('connected')));
-      this._peer.addEventListener('disconnected', () => this.dispatchEvent(new Event('disconnected')));
+      this._peer.addEventListener("connected", () =>
+        this.dispatchEvent(new Event("connected")),
+      );
+      this._peer.addEventListener("disconnected", () =>
+        this.dispatchEvent(new Event("disconnected")),
+      );
 
       while (this.bytesReceived < this.file.size) {
         // if not connected, this will block until connected
@@ -120,13 +119,17 @@ export class Receiver extends EventTarget {
       this._peer.close();
 
       // get the file from IndexedDB
-      this.dispatchEvent(new Event('processing'));
-      const compiledBlob = await fileStore.flush(this.file.size, this.file.type, (progress) => {
-        this.processingProgress = progress;
-      });
+      this.dispatchEvent(new Event("processing"));
+      const compiledBlob = await fileStore.flush(
+        this.file.size,
+        this.file.type,
+        (progress) => {
+          this.processingProgress = progress;
+        },
+      );
 
       // download the file
-      const downloadElement = document.createElement('a');
+      const downloadElement = document.createElement("a");
       downloadElement.href = URL.createObjectURL(compiledBlob);
       downloadElement.download = this.file.name;
       downloadElement.click();
@@ -138,17 +141,17 @@ export class Receiver extends EventTarget {
       });
 
       // clean up from the IndexedDB
-      this.dispatchEvent(new Event('cleanup'));
+      this.dispatchEvent(new Event("cleanup"));
       await fileStore.clear((progress) => {
         this.processingProgress = progress;
       });
 
       // all done
-      this.dispatchEvent(new Event('done'));
+      this.dispatchEvent(new Event("done"));
     } catch (err) {
       this._peer?.close();
       this.error = err;
-      this.dispatchEvent(new Event('error'));
+      this.dispatchEvent(new Event("error"));
     }
   }
 }

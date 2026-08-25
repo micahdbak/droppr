@@ -1,29 +1,27 @@
-// ReceiverContainer.jsx
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { useParams } from "react-router";
 
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useParams } from 'react-router-dom';
+import { Receiver, errorToString } from "./core";
+import { ReceiverConfirm } from "./ReceiverConfirm.jsx";
+import { ReceiverProcessing } from "./ReceiverProcessing.jsx";
+import { ReceiverTransfer } from "./ReceiverTransfer.jsx";
+import { SpinningWheel } from "./SpinningWheel.jsx";
 
-import { Receiver, errorToString } from './core';
-import { ReceiverConfirm } from './ReceiverConfirm.jsx';
-import { ReceiverProcessing } from './ReceiverProcessing.jsx';
-import { ReceiverTransfer } from './ReceiverTransfer.jsx';
-import { SpinningWheel } from './SpinningWheel.jsx';
-
-const STATE_CONFIRM    = 0;
+const STATE_CONFIRM = 0;
 const STATE_CONNECTING = 1;
-const STATE_TRANSFER   = 2;
+const STATE_TRANSFER = 2;
 const STATE_PROCESSING = 3;
-const STATE_CLEANUP    = 4;
+const STATE_CLEANUP = 4;
 
 export function ReceiverContainer() {
   const [bytesReceived, setBytesReceived] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(1);
   const [file, setFile] = useState({
-    name: 'tmp.bin',
+    name: "tmp.bin",
     size: 0,
-    type: 'application/octet-stream',
-    href: ''
+    type: "application/octet-stream",
+    href: "",
   });
   const [processingProgress, setProcessingProgress] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
@@ -39,7 +37,7 @@ export function ReceiverContainer() {
       window.location.reload();
       return;
     }
-  }, []);
+  }, [code]);
 
   const onConfirm = async () => {
     // run exactly once on execution of JS within this component
@@ -55,23 +53,23 @@ export function ReceiverContainer() {
         setFile(_file);
 
         // will be used by Success.jsx
-        sessionStorage.setItem('isDropper', 'false');
-        sessionStorage.setItem('totalSize', _file.size);
-        sessionStorage.setItem('fileName', _file.name);
+        sessionStorage.setItem("isDropper", "false");
+        sessionStorage.setItem("totalSize", _file.size);
+        sessionStorage.setItem("fileName", _file.name);
 
         const receiver = new Receiver(_file); // will prompt for a file save location
         window.___DROPPR___.receiver = receiver;
         let checkReceiverInterval = null;
 
-        receiver.addEventListener('error', () => {
-          sessionStorage.setItem('error', errorToString(receiver.error));
+        receiver.addEventListener("error", () => {
+          sessionStorage.setItem("error", errorToString(receiver.error));
 
           // go to ShowError.jsx
           window.location.href = window.location.origin + "/#error";
           window.location.reload();
         });
 
-        receiver.addEventListener('connected', () => {
+        receiver.addEventListener("connected", () => {
           setState(STATE_TRANSFER); // show ReceiverTransfer.jsx
           const startTime = Date.now(); // for checkReceiverInterval
 
@@ -84,17 +82,21 @@ export function ReceiverContainer() {
                 // otherwise, update bytesReceived, remainingSeconds, elapsedSeconds
                 const _bytesReceived = receiver.bytesReceived;
                 setBytesReceived(_bytesReceived);
-  
+
                 const msElapsed = Date.now() - startTime;
                 const _elapsedSeconds = msElapsed / 1000;
                 setElapsedSeconds(Math.ceil(_elapsedSeconds));
 
                 const avgSecondsPerByte = _elapsedSeconds / _bytesReceived;
-                const _remainingSeconds = (_file.size - _bytesReceived) * avgSecondsPerByte;
+                const _remainingSeconds =
+                  (_file.size - _bytesReceived) * avgSecondsPerByte;
                 setRemainingSeconds(Math.ceil(_remainingSeconds));
-                
+
                 // for Success.jsx
-                sessionStorage.setItem('elapsedSeconds', Math.ceil(_elapsedSeconds));
+                sessionStorage.setItem(
+                  "elapsedSeconds",
+                  Math.ceil(_elapsedSeconds),
+                );
               }
 
               return _state;
@@ -102,36 +104,36 @@ export function ReceiverContainer() {
           }, 100); // 100ms
         });
 
-        receiver.addEventListener('disconnected', () => {
+        receiver.addEventListener("disconnected", () => {
           clearInterval(checkReceiverInterval);
           setState(STATE_CONNECTING);
         });
 
-        receiver.addEventListener('processing', async () => {
+        receiver.addEventListener("processing", async () => {
           setState(STATE_PROCESSING);
         });
 
-        receiver.addEventListener('cleanup', async () => {
+        receiver.addEventListener("cleanup", async () => {
           setState(STATE_CLEANUP);
         });
 
-        receiver.addEventListener('done', async () => {
+        receiver.addEventListener("done", async () => {
           clearInterval(checkReceiverInterval);
-          await axios.post('/api/cleanup');
+          await axios.post("/api/cleanup");
 
           // go to Success.jsx
           window.location.href = window.location.origin + "/#success";
           window.location.reload();
         });
       } catch (err) {
-        sessionStorage.setItem('error', errorToString(err));
+        sessionStorage.setItem("error", errorToString(err));
 
         // go to ShowError.jsx
         window.location.href = window.location.origin + "/#error";
         window.location.reload();
       }
     }
-  }
+  };
 
   switch (state) {
     case STATE_CONFIRM:
@@ -150,8 +152,15 @@ export function ReceiverContainer() {
       );
 
     case STATE_TRANSFER:
-      return <ReceiverTransfer bytesReceived={bytesReceived} fileName={file.name} remainingSeconds={remainingSeconds} totalSize={file.size} />;
-    
+      return (
+        <ReceiverTransfer
+          bytesReceived={bytesReceived}
+          fileName={file.name}
+          remainingSeconds={remainingSeconds}
+          totalSize={file.size}
+        />
+      );
+
     default: // STATE_CONNECTING
       return <SpinningWheel />;
   }
