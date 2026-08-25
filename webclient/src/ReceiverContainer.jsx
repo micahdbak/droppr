@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useParams } from 'react-router';
+import { useParams } from 'react-router-dom';
 
 import { Receiver, errorToString } from './core';
 import { ReceiverConfirm } from './ReceiverConfirm.jsx';

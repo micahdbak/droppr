@@ -1,7 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
-----------------------------------------------------------------
-
 CREATE TABLE drops (
     id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     code         char(6)      NOT NULL,
