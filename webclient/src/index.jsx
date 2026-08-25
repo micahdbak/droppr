@@ -3,7 +3,7 @@ import "../tailwind.css";
 
 import { useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
-import { createHashRouter, RouterProvider } from "react-router-dom";
+import { createHashRouter, RouterProvider } from "react-router";
 import axios from "axios";
 
 import { About } from "./About.jsx";
