@@ -1,7 +1,3 @@
-// ProgressBar.jsx
-
-import React, { useEffect, useRef, useState } from 'react';
-
 export function ProgressBar(props) {
   const { percentage } = props;
 

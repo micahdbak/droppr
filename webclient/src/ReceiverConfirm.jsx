@@ -1,10 +1,8 @@
-// ReceiverConfirm.jsx
+import { useState, useEffect } from "react";
+import axios from "axios";
 
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-import { bytesToString, errorToString } from './core';
-import { AppWindow } from './components';
+import { bytesToString, errorToString } from "./core";
+import { AppWindow } from "./components";
 
 /**
  * @param {object} props
@@ -15,9 +13,9 @@ export function ReceiverConfirm(props) {
   const { code, onConfirm } = props;
 
   const [file, setFile] = useState({
-    name: 'tmp.bin',
+    name: "tmp.bin",
     size: 0,
-    type: 'application/octet-stream'
+    type: "application/octet-stream",
   });
 
   const onGoBack = () => {
@@ -26,34 +24,48 @@ export function ReceiverConfirm(props) {
   };
 
   useEffect(() => {
-    console.log('1');
-    
+    let cancelled = false;
+
     const peekFile = async () => {
       try {
         const res = await axios.get("/api/peek/" + code.toUpperCase());
-        setFile(res.data.file);
+
+        if (!cancelled) {
+          setFile(res.data.file);
+        }
       } catch (err) {
-        sessionStorage.setItem('error', errorToString(err));
-        console.log(err);
+        if (!cancelled) {
+          sessionStorage.setItem("error", errorToString(err));
+        }
       }
     };
 
     peekFile();
-  }, []);
-  
+
+    return () => {
+      cancelled = true;
+    };
+  }, [code]);
+
   return (
     <AppWindow>
       <img src="/confirm.png" className="w-full h-20 mb-4 object-contain" />
-      
+
       <p className="text-xl mb-2">Does this look right?</p>
       <p
         className="text-2xl bg-gray-200 px-2 rounded-lg whitespace-nowrap text-ellipsis mb-1"
-        style={{ maxWidth: '18rem', overflow: 'hidden', textOverflow: 'text-ellipsis' }}
+        style={{
+          maxWidth: "18rem",
+          overflow: "hidden",
+          textOverflow: "text-ellipsis",
+        }}
       >
         {file.name}
       </p>
-      <p className="text-xs mb-4 text-gray-500"><b>{bytesToString(file.size)}</b>, drop code is <b>{code}</b></p>
-      
+      <p className="text-xs mb-4 text-gray-500">
+        <b>{bytesToString(file.size)}</b>, drop code is <b>{code}</b>
+      </p>
+
       <div className="flex flex-row gap-1">
         <button
           type="button"

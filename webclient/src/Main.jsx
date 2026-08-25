@@ -1,10 +1,8 @@
-// Main.jsx
+import { useEffect, useState } from "react";
+import axios from "axios";
 
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-
-import { AppWindow } from './components';
-import { DropperContainer } from './DropperContainer.jsx';
+import { AppWindow } from "./components";
+import { DropperContainer } from "./DropperContainer.jsx";
 
 export function Main() {
   const [isWaiting, setIsWaiting] = useState(false);
@@ -22,17 +20,17 @@ export function Main() {
           const data = {
             name: file.name,
             size: file.size,
-            type: file.type
+            type: file.type,
           };
 
           // will throw an error if not able to register
           const res = await axios.post("/api/register", data, {
-            headers: { 'Content-Type': 'application/json' }
+            headers: { "Content-Type": "application/json" },
           });
           setDropCode(res.data.drop_code);
           setIsWaiting(false); // stop displaying waiting screen
         } catch (err) {
-          sessionStorage.setItem('error', err.toString());
+          sessionStorage.setItem("error", err.toString());
           window.location.href = window.location.origin + "/#error";
           window.location.reload();
         }
@@ -40,7 +38,7 @@ export function Main() {
 
       registerDrop();
     }
-  }, [file]); 
+  }, [file]);
 
   // display waiting screen if waiting for a promise
   if (isWaiting === true) {
@@ -49,7 +47,7 @@ export function Main() {
 
   // not waiting, and is dropper; display dropper container
   if (file !== null) {
-    return <DropperContainer file={file} code={dropCode} />
+    return <DropperContainer file={file} code={dropCode} />;
   }
 
   // landing page
@@ -63,21 +61,25 @@ export function Main() {
     const code = document.querySelector('input[type="text"]').value;
 
     if (!/^([a-zA-Z0-9]{6,6})$/.test(code)) {
-      sessionStorage.setItem('error', `The drop code "${code}" is invalid.`)
+      sessionStorage.setItem("error", `The drop code "${code}" is invalid.`);
       window.location.href = window.location.origin + "/#error";
       window.location.reload();
     } else {
       window.location.href = window.location.origin + `#${code}`;
       window.location.reload();
     }
-  }
+  };
 
   return (
     <AppWindow>
       <div className="flex flex-col items-center">
         <img className="mb-4" src="/drop_files.png" />
-        <p className="text-lg">droppr is <b>P2P file transfer</b></p>
-        <p className="text-sm mb-4 text-gray-500">(Best used with <u>Chrome</u> browsers)</p>
+        <p className="text-lg">
+          droppr is <b>P2P file transfer</b>
+        </p>
+        <p className="text-sm mb-4 text-gray-500">
+          (Best used with <u>Chrome</u> browsers)
+        </p>
         <input type="file" onChange={handleFile} className="hidden" />
         <button
           type="button"
@@ -89,7 +91,7 @@ export function Main() {
       </div>
       <div
         className="absolute flex w-full flex-row justify-center items-center gap-1"
-        style={{ bottom: '16px', left: '50%', transform: 'translateX(-50%)' }}
+        style={{ bottom: "16px", left: "50%", transform: "translateX(-50%)" }}
       >
         <p className="text-sm mr-2">Have a code?</p>
         <input
