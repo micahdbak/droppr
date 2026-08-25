@@ -1,4 +1,6 @@
-// index.js (entry-point for webclient)
+// index.jsx (entry-point for webclient)
+
+import '../tailwind.css';
 
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';

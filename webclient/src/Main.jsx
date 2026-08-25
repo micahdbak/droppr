@@ -75,7 +75,7 @@ export function Main() {
   return (
     <AppWindow>
       <div className="flex flex-col items-center">
-        <img className="mb-4" src="drop_files.png" />
+        <img className="mb-4" src="/drop_files.png" />
         <p className="text-lg">droppr is <b>P2P file transfer</b></p>
         <p className="text-sm mb-4 text-gray-500">(Best used with <u>Chrome</u> browsers)</p>
         <input type="file" onChange={handleFile} className="hidden" />
