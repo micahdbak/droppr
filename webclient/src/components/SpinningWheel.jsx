@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { AppWindow } from "./components";
+import { AppWindow } from "@/layouts";
 
 export function SpinningWheel() {
   const [degree, setDegree] = useState(0);

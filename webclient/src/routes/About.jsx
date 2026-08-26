@@ -1,4 +1,4 @@
-import { AppWindow } from "./components";
+import { AppWindow } from "@/layouts";
 
 export function About() {
   return (

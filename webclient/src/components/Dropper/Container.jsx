@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-import { dropFile, errorToString } from "./lib";
-import { DropperWaiting } from "./DropperWaiting.jsx";
-import { DropperTransfer } from "./DropperTransfer.jsx";
-import { SpinningWheel } from "./SpinningWheel.jsx";
+import { dropFile, errorToString } from "@/lib";
+import { SpinningWheel } from "@/components/SpinningWheel.jsx";
+
+import { DropperWaiting } from "./Waiting.jsx";
+import { DropperTransfer } from "./Transfer.jsx";
 
 const STATE_WAITING = 0;
 const STATE_CONNECTING = 1;
@@ -27,10 +28,7 @@ export function DropperContainer(props) {
 
     dropper.addEventListener("error", () => {
       sessionStorage.setItem("error", errorToString(dropper.error));
-
-      // go to ShowError.jsx
-      window.location.href = window.location.origin + "/#error";
-      window.location.reload();
+      window.location.hash = "error";
     });
 
     dropper.addEventListener("connected", () => {
@@ -65,10 +63,7 @@ export function DropperContainer(props) {
     dropper.addEventListener("done", async () => {
       clearInterval(checkDropperInterval);
       await axios.post("/api/cleanup");
-
-      // go to Success.jsx
-      window.location.href = window.location.origin + "/#success";
-      window.location.reload();
+      window.location.hash = "success";
     });
   };
 
@@ -83,10 +78,7 @@ export function DropperContainer(props) {
       dropFile(file, addEventListeners);
     } catch (err) {
       sessionStorage.setItem("error", errorToString(err));
-
-      // go to ShowError.jsx
-      window.location.href = window.location.origin + "/#error";
-      window.location.reload();
+      window.location.hash = "error";
     }
 
     // NOTE: this intentionally captures initial values, and only runs on mount

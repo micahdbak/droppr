@@ -1,5 +1,5 @@
-import { AppWindow } from "./components";
-import { bytesToString, secondsToString } from "./lib";
+import { bytesToString, secondsToString } from "@/lib";
+import { AppWindow } from "@/layouts";
 
 /**
  * @param {object} props

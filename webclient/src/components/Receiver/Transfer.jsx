@@ -1,5 +1,6 @@
-import { AppWindow, ProgressBar } from "./components";
-import { bytesToString, secondsToString } from "./lib";
+import { bytesToString, secondsToString } from "@/lib";
+import { AppWindow } from "@/layouts";
+import { ProgressBar } from "@/components";
 
 /**
  * @param {object} props

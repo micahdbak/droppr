@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-import { bytesToString, errorToString } from "./lib";
-import { AppWindow } from "./components";
+import { bytesToString, errorToString } from "@/lib";
+import { AppWindow } from "@/layouts";
 
 /**
  * @param {object} props
@@ -19,8 +19,7 @@ export function ReceiverConfirm(props) {
   });
 
   const onGoBack = () => {
-    window.location.href = window.location.origin + "/#";
-    window.location.reload();
+    window.location.hash = "";
   };
 
   useEffect(() => {

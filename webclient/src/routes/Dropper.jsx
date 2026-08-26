@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-import { AppWindow } from "./components";
-import { DropperContainer } from "./DropperContainer.jsx";
+import { AppWindow } from "@/layouts";
+import { DropperContainer } from "@/components";
 
-export function Main() {
+export function Dropper() {
   const [isWaiting, setIsWaiting] = useState(false);
   const [dropCode, setDropCode] = useState(null);
   const [file, setFile] = useState(null);
@@ -31,8 +31,8 @@ export function Main() {
           setIsWaiting(false); // stop displaying waiting screen
         } catch (err) {
           sessionStorage.setItem("error", err.toString());
-          window.location.href = window.location.origin + "/#error";
-          window.location.reload();
+          window.location.hash = "error";
+          return;
         }
       };
 
@@ -62,11 +62,9 @@ export function Main() {
 
     if (!/^([a-zA-Z0-9]{6,6})$/.test(code)) {
       sessionStorage.setItem("error", `The drop code "${code}" is invalid.`);
-      window.location.href = window.location.origin + "/#error";
-      window.location.reload();
+      window.location.hash = "error";
     } else {
-      window.location.href = window.location.origin + `#${code}`;
-      window.location.reload();
+      window.location.hash = `#${code}`;
     }
   };
 

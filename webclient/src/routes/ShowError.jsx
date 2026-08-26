@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { AppWindow } from "./components";
+
+import { AppWindow } from "@/layouts";
 
 export function ShowError() {
   const [error, setError] = useState("");
