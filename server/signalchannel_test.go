@@ -10,6 +10,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// ----------------------------------------------------------------
+
 /*
 * Verifies that message relaying between two peers in the same session actually works
 */

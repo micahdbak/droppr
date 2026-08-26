@@ -13,6 +13,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// ----------------------------------------------------------------
+
+// init test database for test
 func initDB(t *testing.T) {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
