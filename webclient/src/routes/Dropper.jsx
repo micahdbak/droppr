@@ -81,19 +81,22 @@ export function Dropper() {
         <input type="file" onChange={handleFile} className="hidden" />
         <button
           type="button"
-          className="text-lg bg-gray-700 hover:bg-gray-500 text-white px-4 py-2 rounded-xl mb-8"
+          className="text-lg bg-gray-700 hover:bg-gray-500 text-white px-4 py-2
+            rounded-xl mb-8"
           onClick={() => document.querySelector('input[type="file"]').click()}
         >
           Choose File
         </button>
       </div>
       <div
-        className="absolute flex w-full flex-row justify-center items-center gap-1"
+        className="absolute flex w-full flex-row justify-center items-center
+          gap-1"
         style={{ bottom: "16px", left: "50%", transform: "translateX(-50%)" }}
       >
         <p className="text-sm mr-2">Have a code?</p>
         <input
-          className="rounded-lg font-mono text-sm px-2 py-1 ring-inset ring-1 ring-gray-400 focus:outline-none focus:ring-2"
+          className="rounded-lg font-mono text-sm px-2 py-1 ring-inset ring-1
+            ring-gray-400 focus:outline-none focus:ring-2"
           style={{ width: "calc(6ch + 1rem)" }}
           type="text"
           placeholder="A1B2C3"
@@ -101,7 +104,8 @@ export function Dropper() {
           maxLength="6"
         />
         <button
-          className="bg-gray-700 hover:bg-gray-500 text-white text-sm px-2 py-1 rounded-lg"
+          className="bg-gray-700 hover:bg-gray-500 text-white text-sm px-2 py-1
+            rounded-lg"
           onClick={handleReceive}
         >
           Receive
