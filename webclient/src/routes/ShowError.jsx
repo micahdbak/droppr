@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { AppWindow } from "./components";
+
+import { AppWindow } from "@/layouts";
 
 export function ShowError() {
   const [error, setError] = useState("");
@@ -17,7 +18,8 @@ export function ShowError() {
         <p className="text-2xl font-semibold">Error.</p>
         <p className="text-sm mb-4">{error}</p>
         <a
-          className="text-lg bg-gray-700 hover:bg-gray-500 text-white px-4 py-2 rounded-xl mb-1"
+          className="text-lg bg-gray-700 hover:bg-gray-500 text-white px-4 py-2
+            rounded-xl mb-1"
           href="/#"
         >
           Go Back

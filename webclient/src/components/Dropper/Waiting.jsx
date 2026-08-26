@@ -2,8 +2,8 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCopy, faCheck } from "@fortawesome/free-solid-svg-icons";
 
-import { AppWindow } from "./components";
-import { bytesToString } from "./lib";
+import { bytesToString } from "@/lib";
+import { AppWindow } from "@/layouts";
 
 /**
  * @param {object} props

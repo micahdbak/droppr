@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import axios from "axios";
-import { useParams } from "react-router";
 
-import { receiveFile, errorToString } from "./lib";
-import { ReceiverConfirm } from "./ReceiverConfirm.jsx";
-import { ReceiverProcessing } from "./ReceiverProcessing.jsx";
-import { ReceiverTransfer } from "./ReceiverTransfer.jsx";
-import { SpinningWheel } from "./SpinningWheel.jsx";
+import { receiveFile, errorToString } from "@/lib";
+import {
+  SpinningWheel,
+  ReceiverConfirm,
+  ReceiverProcessing,
+  ReceiverTransfer,
+} from "@/components";
 
 const STATE_CONFIRM = 0;
 const STATE_CONNECTING = 1;
@@ -14,7 +15,9 @@ const STATE_TRANSFER = 2;
 const STATE_PROCESSING = 3;
 const STATE_CLEANUP = 4;
 
-export function ReceiverContainer() {
+export function Receiver(props) {
+  const { code } = props;
+
   const [bytesReceived, setBytesReceived] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(1);
   const [file, setFile] = useState({
@@ -27,32 +30,19 @@ export function ReceiverContainer() {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [state, setState] = useState(STATE_CONFIRM);
 
-  const { code } = useParams(); // code is in URL fragment
-
-  // on page load
-  useEffect(() => {
-    if (!/^([a-zA-Z0-9]{6,6})$/.test(code)) {
-      // go to Main.jsx
-      window.location.href = window.location.origin + "/#";
-      window.location.reload();
-      return;
-    }
-  }, [code]);
-
   const addEventListeners = (receiver) => {
     let checkReceiverInterval = null;
+    let startTime = null;
+    let endTime = null;
 
     receiver.addEventListener("error", () => {
       sessionStorage.setItem("error", errorToString(receiver.error));
-
-      // go to ShowError.jsx
-      window.location.href = window.location.origin + "/#error";
-      window.location.reload();
+      window.location.hash = "error";
     });
 
     receiver.addEventListener("connected", () => {
       setState(STATE_TRANSFER); // show ReceiverTransfer.jsx
-      const startTime = Date.now(); // for checkReceiverInterval
+      startTime = Date.now(); // for checkReceiverInterval
 
       checkReceiverInterval = setInterval(() => {
         setState((_state) => {
@@ -91,6 +81,7 @@ export function ReceiverContainer() {
     });
 
     receiver.addEventListener("processing", async () => {
+      endTime = Date.now();
       setState(STATE_PROCESSING);
     });
 
@@ -100,11 +91,20 @@ export function ReceiverContainer() {
 
     receiver.addEventListener("done", async () => {
       clearInterval(checkReceiverInterval);
-      await axios.post("/api/cleanup");
 
-      // go to Success.jsx
-      window.location.href = window.location.origin + "/#success";
-      window.location.reload();
+      if (endTime === null) {
+        endTime = Date.now();
+      }
+
+      if (startTime !== null) {
+        sessionStorage.setItem(
+          "elapsedSeconds",
+          Math.max(1, Math.ceil((endTime - startTime) / 1000)),
+        );
+      }
+
+      await axios.post("/api/cleanup");
+      window.location.hash = "success";
     });
   };
 
@@ -124,10 +124,7 @@ export function ReceiverContainer() {
       sessionStorage.setItem("fileName", _file.name);
     } catch (err) {
       sessionStorage.setItem("error", errorToString(err));
-
-      // go to ShowError.jsx
-      window.location.href = window.location.origin + "/#error";
-      window.location.reload();
+      window.location.hash = "error";
     }
   };
 

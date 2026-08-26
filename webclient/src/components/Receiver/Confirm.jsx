@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-import { bytesToString, errorToString } from "./lib";
-import { AppWindow } from "./components";
+import { bytesToString, errorToString } from "@/lib";
+import { AppWindow } from "@/layouts";
 
 /**
  * @param {object} props
@@ -19,8 +19,7 @@ export function ReceiverConfirm(props) {
   });
 
   const onGoBack = () => {
-    window.location.href = window.location.origin + "/#";
-    window.location.reload();
+    window.location.hash = "";
   };
 
   useEffect(() => {
@@ -53,7 +52,8 @@ export function ReceiverConfirm(props) {
 
       <p className="text-xl mb-2">Does this look right?</p>
       <p
-        className="text-2xl bg-gray-200 px-2 rounded-lg whitespace-nowrap text-ellipsis mb-1"
+        className="text-2xl bg-gray-200 px-2 rounded-lg whitespace-nowrap
+          text-ellipsis mb-1"
         style={{
           maxWidth: "18rem",
           overflow: "hidden",
@@ -69,13 +69,15 @@ export function ReceiverConfirm(props) {
       <div className="flex flex-row gap-1">
         <button
           type="button"
-          className="bg-gray-700 hover:bg-gray-500 text-white px-4 py-2 rounded-lg"
+          className="bg-gray-700 hover:bg-gray-500 text-white px-4 py-2
+            rounded-lg"
           onClick={onConfirm}
         >
           Receive
         </button>
         <button
-          className="bg-gray-100 ring-1 ring-inset hover:ring-2 ring-gray-400 text-gray-700 px-4 py-2 rounded-lg"
+          className="bg-gray-100 ring-1 ring-inset hover:ring-2 ring-gray-400
+            text-gray-700 px-4 py-2 rounded-lg"
           onClick={onGoBack}
         >
           Go back

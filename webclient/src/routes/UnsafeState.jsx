@@ -1,18 +1,16 @@
 import axios from "axios";
 
-import { errorToString } from "./lib";
+import { errorToString } from "@/lib";
 
-export function ExistingCookies() {
-  const onContinue = async () => {
+export function UnsafeState() {
+  const cleanup = async () => {
     try {
       await axios.post("/api/cleanup");
-      window.location.reload();
+      window.location.hash = "";
+      window.location.reload(); // force a full remount
     } catch (err) {
       sessionStorage.setItem("error", errorToString(err));
-
-      // go to ShowError.jsx
-      window.location.href = window.location.origin + "/#error";
-      window.location.reload();
+      window.location.hash = "error";
     }
   };
 
@@ -21,7 +19,7 @@ export function ExistingCookies() {
       <p>Your browser suggests a drop is already in progress.</p>
       <p>Continuing WILL BREAK an in progress drop in another tab.</p>
       <p>(Close this tab if you changed your mind.)</p>
-      <button onClick={onContinue}>Continue</button>
+      <button onClick={cleanup}>Continue</button>
     </>
   );
 }
