@@ -4,6 +4,7 @@ import { faCopy, faCheck } from "@fortawesome/free-solid-svg-icons";
 
 import { bytesToString } from "@/lib";
 import { AppWindow } from "@/layouts";
+import { DropperQRCode } from "./QRCode.jsx";
 
 /**
  * @param {object} props
@@ -37,7 +38,11 @@ export function DropperWaiting(props) {
       <img src="/hourglass.gif" className="w-full h-20 mb-4 object-contain" />
 
       <p className="text-xl mb-1">Your drop code is:</p>
-      <p className="text-6xl font-mono bg-gray-200 px-2 rounded-lg">{code}</p>
+      <div className="flex items-center gap-2">
+        <p className="text-6xl font-mono bg-gray-200 px-2 rounded-lg">{code}</p>
+        <DropperQRCode url={downloadLink} logoUrl="/drop_files_square.png" />
+      </div>
+
       <p className="text-xs mb-4 text-gray-500">
         {bytesToString(totalSize)}, {fileName}
       </p>
