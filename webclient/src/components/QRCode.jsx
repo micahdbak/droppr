@@ -6,7 +6,7 @@ import QRCodeStyling from "qr-code-styling";
  * @param {string} props.url
  * @param {string} [props.logoUrl]
  */
-export function DropperQRCode(props) {
+export function QRCode(props) {
   const { url, logoUrl } = props;
   const ref = useRef(null);
   const qrCode = useRef(null);
@@ -28,6 +28,12 @@ export function DropperQRCode(props) {
       ref.current.innerHTML = "";
       qrCode.current.append(ref.current);
     }
+
+    // NOTE: this intentionally only initializes the QR code on mount; the
+    // update effect below handles subsequent changes to url/logoUrl. Adding
+    // them here would recreate the instance and re-append on every change,
+    // racing with the update effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

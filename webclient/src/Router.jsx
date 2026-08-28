@@ -10,6 +10,7 @@ import {
   About,
   Receiver,
   NotFound,
+  Loading,
 } from "@/routes";
 
 const routes = {
@@ -90,11 +91,7 @@ export function Router() {
   }, []);
 
   if (!ready) {
-    return (
-      <>
-        <p>Getting things ready ({readyPercentage}%)...</p>
-      </>
-    );
+    return <Loading percentage={readyPercentage} />;
   }
 
   const Route = routes[route];

@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 
-import { receiveFile, errorToString } from "@/lib";
 import {
-  SpinningWheel,
-  ReceiverConfirm,
-  ReceiverProcessing,
-  ReceiverTransfer,
-} from "@/components";
+  receiveFile,
+  errorToString,
+  bytesToString,
+  secondsToString,
+} from "@/lib";
+import { AppWindow, TransferWindow } from "@/layouts";
+import { Button, Spinner } from "@/components";
 
 const STATE_CONFIRM = 0;
 const STATE_CONNECTING = 1;
@@ -26,9 +27,33 @@ export function Receiver(props) {
     type: "application/octet-stream",
     href: "",
   });
-  const [processingProgress, setProcessingProgress] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [state, setState] = useState(STATE_CONFIRM);
+
+  // peek at the file info for the confirm screen
+  useEffect(() => {
+    let cancelled = false;
+
+    const peekFile = async () => {
+      try {
+        const res = await axios.get("/api/peek/" + code.toUpperCase());
+
+        if (!cancelled) {
+          setFile(res.data.file);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          sessionStorage.setItem("error", errorToString(err));
+        }
+      }
+    };
+
+    peekFile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [code]);
 
   const addEventListeners = (receiver) => {
     let checkReceiverInterval = null;
@@ -41,16 +66,13 @@ export function Receiver(props) {
     });
 
     receiver.addEventListener("connected", () => {
-      setState(STATE_TRANSFER); // show ReceiverTransfer.jsx
+      setState(STATE_TRANSFER); // show transfer screen
       startTime = Date.now(); // for checkReceiverInterval
 
       checkReceiverInterval = setInterval(() => {
         setState((_state) => {
-          // in this case, only update the processingProgress
-          if (_state === STATE_PROCESSING || _state === STATE_CLEANUP) {
-            setProcessingProgress(receiver.processingProgress);
-          } else {
-            // otherwise, update bytesReceived, remainingSeconds, elapsedSeconds
+          // only update transfer stats while transferring
+          if (_state !== STATE_PROCESSING && _state !== STATE_CLEANUP) {
             const _bytesReceived = receiver.bytesReceived;
             setBytesReceived(_bytesReceived);
 
@@ -128,33 +150,76 @@ export function Receiver(props) {
     }
   };
 
+  const onGoBack = () => {
+    window.location.hash = "";
+  };
+
   switch (state) {
     case STATE_CONFIRM:
-      return <ReceiverConfirm code={code} onConfirm={onConfirm} />;
-
-    case STATE_PROCESSING:
-    case STATE_CLEANUP:
       return (
-        <ReceiverProcessing
-          elapsedSeconds={elapsedSeconds}
-          fileName={file.name}
-          isCleanUp={state === STATE_CLEANUP}
-          progress={processingProgress}
-          totalSize={file.size}
-        />
+        <AppWindow>
+          <img src="/confirm.png" className="w-full h-20 mb-4 object-contain" />
+
+          <p className="text-xl mb-2">Does this look right?</p>
+          <p
+            className="text-2xl bg-gray-200 px-2 rounded-lg whitespace-nowrap
+              text-ellipsis mb-1"
+            style={{
+              maxWidth: "18rem",
+              overflow: "hidden",
+              textOverflow: "text-ellipsis",
+            }}
+          >
+            {file.name}
+          </p>
+          <p className="text-xs mb-4 text-gray-500">
+            <b>{bytesToString(file.size)}</b>, drop code is <b>{code}</b>
+          </p>
+
+          <div className="flex flex-row gap-1">
+            <Button onClick={onConfirm}>Receive</Button>
+            <Button variant="secondary" onClick={onGoBack}>
+              Go back
+            </Button>
+          </div>
+        </AppWindow>
       );
 
     case STATE_TRANSFER:
       return (
-        <ReceiverTransfer
-          bytesReceived={bytesReceived}
+        <TransferWindow
+          verb="Receiving"
           fileName={file.name}
-          remainingSeconds={remainingSeconds}
+          bytesTransferred={bytesReceived}
           totalSize={file.size}
+          remainingSeconds={remainingSeconds}
         />
       );
 
+    case STATE_PROCESSING:
+    case STATE_CLEANUP:
+      return (
+        <AppWindow>
+          <img
+            src="/hourglass.gif"
+            className="w-full h-20 mb-4 object-contain"
+          />
+          <p className="text-xl">
+            {state === STATE_CLEANUP ? "Cleaning up..." : "Processing..."}
+          </p>
+          <p className="text-lg mb-2">
+            Received {file.name} {bytesToString(file.size)} in{" "}
+            {secondsToString(elapsedSeconds)}.
+          </p>
+          <p className="text-sm">{file.name} will be ready in just a moment.</p>
+        </AppWindow>
+      );
+
     default: // STATE_CONNECTING
-      return <SpinningWheel />;
+      return (
+        <AppWindow>
+          <Spinner />
+        </AppWindow>
+      );
   }
 }
