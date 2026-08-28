@@ -1,27 +1,30 @@
 import { bytesToString, secondsToString } from "@/lib";
-import { AppWindow } from "@/layouts";
+
 import { ProgressBar } from "@/components";
+import { AppWindow } from "./AppWindow.jsx";
 
 /**
  * @param {object} props
- * @param {number} props.bytesSent
+ * @param {string} props.verb - "Dropping" or "Receiving"
  * @param {string} props.fileName
- * @param {number} props.remainingSeconds
+ * @param {number} props.bytesTransferred
  * @param {number} props.totalSize
+ * @param {number} props.remainingSeconds
  */
-export function DropperTransfer(props) {
-  const { bytesSent, fileName, remainingSeconds, totalSize } = props;
+export function TransferWindow(props) {
+  const { verb, fileName, bytesTransferred, totalSize, remainingSeconds } =
+    props;
 
-  const percentTransferred = Math.round((100 * bytesSent) / totalSize);
+  const percentTransferred = Math.round((100 * bytesTransferred) / totalSize);
 
   return (
     <AppWindow>
       <img src="/drop.gif" className="w-full" />
-      <p className="text-lg">{`Dropping ${fileName}...`}</p>
+      <p className="text-lg">{`${verb} ${fileName}...`}</p>
       <p className="text-base">{percentTransferred}% done</p>
       <ProgressBar percentage={percentTransferred} />
       <p className="text-sm text-gray-500 mb-3">
-        {bytesToString(bytesSent)} of {bytesToString(totalSize)}
+        {bytesToString(bytesTransferred)} of {bytesToString(totalSize)}
       </p>
       <p className="text-base">{secondsToString(remainingSeconds)} remaining</p>
     </AppWindow>

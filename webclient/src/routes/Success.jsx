@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { bytesToString, secondsToString } from "@/lib";
 import { AppWindow } from "@/layouts";
+import { Button } from "@/components";
 
 export function Success() {
   const isDropper = sessionStorage.getItem("isDropper");
@@ -34,16 +35,12 @@ export function Success() {
   return (
     <AppWindow>
       <div className="flex flex-col items-center">
-        <img className="mb-2" src="/success.png" />
+        <img src="/success.png" className="mb-2" />
         <p className="text-2xl font-semibold">Done!</p>
         <p className="text-sm mb-4">{summary}</p>
-        <a
-          className="text-lg bg-gray-700 hover:bg-gray-500 text-white px-4 py-2
-            rounded-xl mb-1"
-          href="/#"
-        >
+        <Button as="a" href="/#" scale="lg" className="mb-1">
           End Session
-        </a>
+        </Button>
       </div>
     </AppWindow>
   );
