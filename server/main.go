@@ -1,13 +1,17 @@
-// main.go
-
 package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"server/signaling"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -15,37 +19,70 @@ import (
 // shared database connection
 var db *pgxpool.Pool
 
-func init() {
-	signalChannels = make(map[string]*signalChannel)
+func setupRouter(sig *signaling.Server) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/check", serveCheck)
+	mux.HandleFunc("POST /api/claim/{code}", serveClaim)
+	mux.HandleFunc("POST /api/cleanup", serveCleanup)
+	mux.HandleFunc("GET /api/peek/{code}", servePeek)
+	mux.HandleFunc("POST /api/register", serveRegister)
+	mux.HandleFunc("GET /api/status", serveStatus)
+
+	if sig != nil {
+		mux.HandleFunc("GET /sc", sig.Handler(getSessionFromCookies))
+	}
+
+	return mux
 }
 
 func main() {
-	logPlain("~~ droppr server ~~")
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	// connect to database
+	sig := signaling.NewServer()
+
+	slog.Info("~~ droppr server ~~")
+
 	var err error
-	db, err = pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	db, err = pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
 		panic(fmt.Sprintf("%v", err))
 	}
 	defer db.Close()
 
 	// do a test query to make sure the db connection is live and good
-	row := db.QueryRow(context.Background(), "SELECT 'Hello from postgres!'::text AS text")
+	row := db.QueryRow(ctx, "SELECT 'Hello from postgres!'::text AS text")
 	var dbText string
 	err = row.Scan(&dbText)
 	if err != nil {
 		panic(fmt.Sprintf("%v", err))
 	}
-	logPlain("%s", dbText)
+	slog.Info("database connection established", "db_response", dbText)
 
-	http.HandleFunc("/api/check", serveCheck)
-	http.HandleFunc("/api/claim/", serveClaim)
-	http.HandleFunc("/api/cleanup", serveCleanup)
-	http.HandleFunc("/api/peek/", servePeek)
-	http.HandleFunc("/api/register", serveRegister)
-	http.HandleFunc("/api/status", serveStatus)
-	http.HandleFunc("/sc", serveSignalChannel)
+	mux := setupRouter(sig)
 
-	log.Fatal(http.ListenAndServe(":5050", nil))
+	srv := &http.Server{
+		Addr:    ":5050",
+		Handler: mux,
+	}
+
+	go func() {
+		slog.Info("server listening", "addr", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("server failed to start/listen", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-ctx.Done()
+	slog.Info("shutting down server gracefully...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("server forced to shutdown", "error", err)
+	} else {
+		slog.Info("server stopped gracefully")
+	}
 }
