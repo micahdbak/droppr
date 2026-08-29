@@ -11,25 +11,21 @@ import (
 	"syscall"
 	"time"
 
+	"server/api"
 	"server/signaling"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// shared database connection
-var db *pgxpool.Pool
-
-func setupRouter(sig *signaling.Server) *http.ServeMux {
+func setupRouter(apiHandler *api.API, sig *signaling.Server) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/check", serveCheck)
-	mux.HandleFunc("POST /api/claim/{code}", serveClaim)
-	mux.HandleFunc("POST /api/cleanup", serveCleanup)
-	mux.HandleFunc("GET /api/peek/{code}", servePeek)
-	mux.HandleFunc("POST /api/register", serveRegister)
-	mux.HandleFunc("GET /api/status", serveStatus)
+
+	if apiHandler != nil {
+		apiHandler.RegisterRoutes(mux)
+	}
 
 	if sig != nil {
-		mux.HandleFunc("GET /sc", sig.Handler(getSessionFromCookies))
+		mux.HandleFunc("GET /sc", sig.Handler(api.GetSession))
 	}
 
 	return mux
@@ -39,12 +35,9 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	sig := signaling.NewServer()
-
 	slog.Info("~~ droppr server ~~")
 
-	var err error
-	db, err = pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	db, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
 		panic(fmt.Sprintf("%v", err))
 	}
@@ -59,7 +52,9 @@ func main() {
 	}
 	slog.Info("database connection established", "db_response", dbText)
 
-	mux := setupRouter(sig)
+	apiHandler := api.New(db)
+	sig := signaling.NewServer()
+	mux := setupRouter(apiHandler, sig)
 
 	srv := &http.Server{
 		Addr:    ":5050",

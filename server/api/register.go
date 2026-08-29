@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"context"
@@ -28,7 +28,7 @@ func generateDropCode() (string, error) {
 	return string(bytes), nil
 }
 
-func insertDrop(ctx context.Context, file File) (string, string, error) {
+func (a *API) insertDrop(ctx context.Context, file File) (string, string, error) {
 	// lest we enter an infinite loop, attempt this for a maximum of 5 tries
 	for ctr := 0; ctr < 5; ctr++ {
 		code, err := generateDropCode()
@@ -36,7 +36,7 @@ func insertDrop(ctx context.Context, file File) (string, string, error) {
 			return "", "", err
 		}
 
-		row := db.QueryRow(
+		row := a.db.QueryRow(
 			ctx,
 			"INSERT INTO drops(code, file_name, file_size, file_type) VALUES ($1, $2, $3, $4) RETURNING id",
 			code,
@@ -54,7 +54,7 @@ func insertDrop(ctx context.Context, file File) (string, string, error) {
 	return "", "", fmt.Errorf("couldn't insert drop after 5 tries")
 }
 
-func serveRegister(w http.ResponseWriter, r *http.Request) {
+func (a *API) serveRegister(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 
 	var file File
@@ -71,14 +71,14 @@ func serveRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, code, err := insertDrop(r.Context(), file)
+	id, code, err := a.insertDrop(r.Context(), file)
 	if err != nil {
 		slog.Error("failed to generate/insert drop", "error", err)
 		writeHTTPError(w, http.StatusInternalServerError)
 		return
 	}
 
-	err = insertSession(r.Context(), id, "dropper")
+	err = a.insertSession(r.Context(), id, "dropper")
 	if err != nil {
 		slog.Error("failed to insert session for drop", "drop_id", id, "error", err)
 		writeHTTPError(w, http.StatusInternalServerError)

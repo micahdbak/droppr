@@ -1,23 +1,23 @@
-package main
+package api
 
 import (
 	"log/slog"
 	"net/http"
 )
 
-func servePeek(w http.ResponseWriter, r *http.Request) {
+func (a *API) servePeek(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 
 	code := r.PathValue("code")
 	if !dropCodeRegex.MatchString(code) {
-		writeHTTPError(w, http.StatusBadRequest) // 400
+		writeHTTPError(w, http.StatusBadRequest)
 		return
 	}
 
-	file, _, err := selectDropWithCode(r.Context(), code)
+	file, _, err := a.selectDropWithCode(r.Context(), code)
 	if err != nil {
 		slog.Warn("drop not found for peek", "code", code, "error", err)
-		writeHTTPError(w, http.StatusNotFound) // 404
+		writeHTTPError(w, http.StatusNotFound)
 		return
 	}
 

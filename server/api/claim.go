@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"log/slog"
@@ -6,19 +6,19 @@ import (
 	"time"
 )
 
-func serveClaim(w http.ResponseWriter, r *http.Request) {
+func (a *API) serveClaim(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 
 	code := r.PathValue("code")
 	if !dropCodeRegex.MatchString(code) {
-		writeHTTPError(w, http.StatusBadRequest) // 400
+		writeHTTPError(w, http.StatusBadRequest)
 		return
 	}
 
-	file, id, err := selectDropWithCode(r.Context(), code)
+	file, id, err := a.selectDropWithCode(r.Context(), code)
 	if err != nil {
 		slog.Error("failed to find drop with code", "code", code, "error", err)
-		writeHTTPError(w, http.StatusNotFound) // 404
+		writeHTTPError(w, http.StatusNotFound)
 		return
 	}
 
@@ -28,11 +28,11 @@ func serveClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = insertSession(r.Context(), id, "receiver")
+	err = a.insertSession(r.Context(), id, "receiver")
 	if err != nil {
 		// someone claimed the request already; pretend it doesn't exist
 		slog.Warn("failed to claim drop; already claimed", "drop_id", id, "error", err)
-		writeHTTPError(w, http.StatusNotFound) // 404
+		writeHTTPError(w, http.StatusNotFound)
 		return
 	}
 
