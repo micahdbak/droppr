@@ -4,13 +4,13 @@
 
 The server provides the following HTTP routes:
 
-- `/api/register`, register a drop
-- `/api/claim/:drop_id`, claim a drop
-- `/api/peek/:drop_id`, peek at the file info for a drop
-- `/api/status`, get the number of drops served
-- `/api/check`, check whether the requester already has a session
-- `/api/cleanup`, clear the requester's session cookies
-- `/sc`, upgrade a connection to a WebSocket for a signal channel
+- `POST /api/register`, register a drop
+- `POST /api/claim/{code}`, claim a drop
+- `GET /api/peek/{code}`, peek at the file info for a drop
+- `GET /api/status`, get the number of drops served
+- `GET /api/check`, check whether the requester already has a session
+- `POST /api/cleanup`, clear the requester's session cookies
+- `GET /sc`, upgrade a connection to a WebSocket for a signaling channel
 
 ## setup
 
@@ -97,48 +97,38 @@ The server reads its database connection string from the `DATABASE_URL`
 environment variable. Using the user/database/password created above:
 
 ```sh
-DATABASE_URL=postgres://droppr:1234@localhost:5432/droppr ./server
+DATABASE_URL=postgres://droppr:1234@localhost:5432/droppr go run .
 ```
 
-The server listens on `:5050`. The webclient dev server (Vite) proxies
+The server listens on `:5050`. The webclient dev server proxies
 `/api/*` and the `/sc` WebSocket to this address.
 
+## testing
 
+### 1. create the test database
 
-## Running Backend Tests
-
-Integration tests require a dedicated PostgreSQL test database (`droppr_test`) to ensure local development data is not overwritten.
-
-### 1. One-Time Test Database Setup
-
-Run this command once in your terminal to create the `droppr_test` database and initialize the schema:
+Run the following once to create and initialize the dedicated test database:
 
 ```sh
-sudo -u postgres psql -c "CREATE DATABASE droppr_test OWNER droppr;" && sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE droppr_test TO droppr;" && psql -U droppr -d droppr_test -f schema.sql -h localhost -W
-
+sudo -u postgres psql -c "CREATE DATABASE droppr_test OWNER droppr;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE droppr_test TO droppr;"
+psql -U droppr -d droppr_test -f schema.sql -h localhost -W
 ```
 
----
+### 2. run tests
 
-### 2. Run Test Suites
-
-**Run All Backend Tests (API + SignalChannel):**
+Run all tests across all packages:
 
 ```sh
-DATABASE_URL="postgres://droppr:1234@localhost:5432/droppr_test?sslmode=disable" go test -v ./...
-
+DATABASE_URL="postgres://droppr:1234@localhost:5432/droppr_test" go test -v ./...
 ```
 
-**Run Only API Endpoint Tests:**
+Run tests for a specific package:
 
 ```sh
-DATABASE_URL="postgres://droppr:1234@localhost:5432/droppr_test?sslmode=disable" go test -v -run TestServe
+# api tests
+DATABASE_URL="postgres://droppr:1234@localhost:5432/droppr_test" go test -v ./api/...
 
-```
-
-**Run Only SignalChannel / WebSocket Tests:**
-
-```sh
-DATABASE_URL="postgres://droppr:1234@localhost:5432/droppr_test?sslmode=disable" go test -v -run TestSignal
-
+# signaling tests
+go test -v ./signaling/...
 ```
