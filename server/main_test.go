@@ -13,9 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// ----------------------------------------------------------------
-
-// init test database for test
 func initDB(t *testing.T) *http.ServeMux {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
@@ -30,7 +27,6 @@ func initDB(t *testing.T) *http.ServeMux {
 		}
 	}
 
-	// Clean tables before running test to ensure isolation
 	_, err := db.Exec(context.Background(), "DELETE FROM sessions; DELETE FROM drops;")
 	if err != nil {
 		t.Fatalf("Failed to clear tables: %v", err)
@@ -39,11 +35,9 @@ func initDB(t *testing.T) *http.ServeMux {
 	return setupRouter(nil)
 }
 
-// 1. /api/check
 func TestServeCheck(t *testing.T) {
 	router := initDB(t)
 
-	// Happy Path: GET request with no session cookies
 	req, _ := http.NewRequest("GET", "/api/check", nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -51,7 +45,6 @@ func TestServeCheck(t *testing.T) {
 		t.Errorf("Happy Path: expected 200, got %v", status)
 	}
 
-	// Error Path 1: Non-GET request
 	reqPost, _ := http.NewRequest("POST", "/api/check", nil)
 	rrPost := httptest.NewRecorder()
 	router.ServeHTTP(rrPost, reqPost)
@@ -59,7 +52,6 @@ func TestServeCheck(t *testing.T) {
 		t.Errorf("Error Path (Non-GET): expected 405 or 400, got %v", status)
 	}
 
-	// Error Path 2: GET request with existing session cookies
 	reqCookies, _ := http.NewRequest("GET", "/api/check", nil)
 	reqCookies.AddCookie(&http.Cookie{Name: "drop_id", Value: "test-id-123"})
 	reqCookies.AddCookie(&http.Cookie{Name: "drop_role", Value: "dropper"})
@@ -70,17 +62,14 @@ func TestServeCheck(t *testing.T) {
 	}
 }
 
-// 2. /api/status
 func TestServeStatus(t *testing.T) {
 	router := initDB(t)
 
-	// Insert a completed drop to test count
 	_, err := db.Exec(context.Background(), "INSERT INTO drops(id, code, file_name, file_size, file_type, is_complete) VALUES(gen_random_uuid(), 'AAAAAA', 'test.txt', 100, 'text/plain', 't')")
 	if err != nil {
 		t.Fatalf("Failed to insert drop: %v", err)
 	}
 
-	// Happy Path
 	req, _ := http.NewRequest("GET", "/api/status", nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -93,7 +82,6 @@ func TestServeStatus(t *testing.T) {
 		t.Errorf("Happy Path: expected {'drops': 1}, got %s", rr.Body.String())
 	}
 
-	// Error Path: Non-GET
 	reqPost, _ := http.NewRequest("POST", "/api/status", nil)
 	rrPost := httptest.NewRecorder()
 	router.ServeHTTP(rrPost, reqPost)
@@ -102,11 +90,9 @@ func TestServeStatus(t *testing.T) {
 	}
 }
 
-// 3. /api/register
 func TestServeRegister(t *testing.T) {
 	router := initDB(t)
 
-	// Happy Path
 	fileData := File{Name: "test.pdf", Size: 1024, Type: "application/pdf"}
 	body, _ := json.Marshal(fileData)
 	req, _ := http.NewRequest("POST", "/api/register", bytes.NewBuffer(body))
@@ -124,7 +110,6 @@ func TestServeRegister(t *testing.T) {
 		t.Errorf("Happy Path: expected drop_code in response")
 	}
 
-	// Check cookies
 	cookies := rr.Result().Cookies()
 	var dropID, dropRole string
 	for _, c := range cookies {
@@ -139,7 +124,6 @@ func TestServeRegister(t *testing.T) {
 		t.Errorf("Happy Path: invalid cookies set")
 	}
 
-	// Error Path 1: Bad JSON
 	reqBad, _ := http.NewRequest("POST", "/api/register", bytes.NewBufferString("{bad json"))
 	rrBad := httptest.NewRecorder()
 	router.ServeHTTP(rrBad, reqBad)
@@ -147,7 +131,6 @@ func TestServeRegister(t *testing.T) {
 		t.Errorf("Error Path (Bad JSON): expected 400, got %v", status)
 	}
 
-	// Error Path 2: Invalid Payload (empty fields)
 	badPayload := File{Name: "", Size: 0, Type: ""}
 	badPayloadBody, _ := json.Marshal(badPayload)
 	reqInvalid, _ := http.NewRequest("POST", "/api/register", bytes.NewBuffer(badPayloadBody))
@@ -158,18 +141,15 @@ func TestServeRegister(t *testing.T) {
 	}
 }
 
-// 4. /api/peek/:drop_id
 func TestServePeek(t *testing.T) {
 	router := initDB(t)
 
-	// Setup drop
 	var dropID string
 	err := db.QueryRow(context.Background(), "INSERT INTO drops(code, file_name, file_size, file_type) VALUES('PEEK12', 'peek.txt', 123, 'text/plain') RETURNING id").Scan(&dropID)
 	if err != nil {
 		t.Fatalf("Failed to insert drop: %v", err)
 	}
 
-	// Happy Path
 	req, _ := http.NewRequest("GET", "/api/peek/PEEK12", nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -181,7 +161,6 @@ func TestServePeek(t *testing.T) {
 		t.Errorf("Happy Path: expected file info in body, got %s", rr.Body.String())
 	}
 
-	// Error Path 1: Invalid Regex
 	reqRegex, _ := http.NewRequest("GET", "/api/peek/BAD", nil)
 	rrRegex := httptest.NewRecorder()
 	router.ServeHTTP(rrRegex, reqRegex)
@@ -189,7 +168,6 @@ func TestServePeek(t *testing.T) {
 		t.Errorf("Error Path (Regex): expected 400, got %v", status)
 	}
 
-	// Error Path 2: Not Found
 	reqNotFound, _ := http.NewRequest("GET", "/api/peek/NONONO", nil)
 	rrNotFound := httptest.NewRecorder()
 	router.ServeHTTP(rrNotFound, reqNotFound)
@@ -198,18 +176,15 @@ func TestServePeek(t *testing.T) {
 	}
 }
 
-// 5. /api/claim/:drop_id
 func TestServeClaim(t *testing.T) {
 	router := initDB(t)
 
-	// Setup drop
 	var dropID string
 	err := db.QueryRow(context.Background(), "INSERT INTO drops(code, file_name, file_size, file_type) VALUES('CLAIM1', 'claim.txt', 123, 'text/plain') RETURNING id").Scan(&dropID)
 	if err != nil {
 		t.Fatalf("Failed to insert drop: %v", err)
 	}
 
-	// Happy Path
 	req, _ := http.NewRequest("POST", "/api/claim/CLAIM1", nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -218,7 +193,6 @@ func TestServeClaim(t *testing.T) {
 		t.Errorf("Happy Path: expected 200, got %v", status)
 	}
 
-	// Ensure cookies are set
 	cookies := rr.Result().Cookies()
 	var role string
 	for _, c := range cookies {
@@ -230,7 +204,6 @@ func TestServeClaim(t *testing.T) {
 		t.Errorf("Happy Path: expected receiver role cookie")
 	}
 
-	// Error Path: Already Claimed
 	reqClaimed, _ := http.NewRequest("POST", "/api/claim/CLAIM1", nil)
 	rrClaimed := httptest.NewRecorder()
 	router.ServeHTTP(rrClaimed, reqClaimed)
@@ -239,18 +212,15 @@ func TestServeClaim(t *testing.T) {
 	}
 }
 
-// 6. /api/cleanup
 func TestServeCleanup(t *testing.T) {
 	router := initDB(t)
 
-	// Setup drop
 	var dropID string
 	err := db.QueryRow(context.Background(), "INSERT INTO drops(code, file_name, file_size, file_type) VALUES('CLEAN1', 'clean.txt', 123, 'text/plain') RETURNING id").Scan(&dropID)
 	if err != nil {
 		t.Fatalf("Failed to insert drop: %v", err)
 	}
 
-	// Happy Path
 	req, _ := http.NewRequest("POST", "/api/cleanup", nil)
 	req.AddCookie(&http.Cookie{Name: "drop_id", Value: dropID})
 	req.AddCookie(&http.Cookie{Name: "drop_role", Value: "dropper"})
@@ -271,7 +241,6 @@ func TestServeCleanup(t *testing.T) {
 		}
 	}
 
-	// Validate DB
 	var isComplete bool
 	err = db.QueryRow(context.Background(), "SELECT is_complete FROM drops WHERE id = $1", dropID).Scan(&isComplete)
 	if err != nil || !isComplete {
