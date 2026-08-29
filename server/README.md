@@ -102,3 +102,43 @@ DATABASE_URL=postgres://droppr:1234@localhost:5432/droppr ./server
 
 The server listens on `:5050`. The webclient dev server (Vite) proxies
 `/api/*` and the `/sc` WebSocket to this address.
+
+
+
+## Running Backend Tests
+
+Integration tests require a dedicated PostgreSQL test database (`droppr_test`) to ensure local development data is not overwritten.
+
+### 1. One-Time Test Database Setup
+
+Run this command once in your terminal to create the `droppr_test` database and initialize the schema:
+
+```sh
+sudo -u postgres psql -c "CREATE DATABASE droppr_test OWNER droppr;" && sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE droppr_test TO droppr;" && psql -U droppr -d droppr_test -f schema.sql -h localhost -W
+
+```
+
+---
+
+### 2. Run Test Suites
+
+**Run All Backend Tests (API + SignalChannel):**
+
+```sh
+DATABASE_URL="postgres://droppr:1234@localhost:5432/droppr_test?sslmode=disable" go test -v ./...
+
+```
+
+**Run Only API Endpoint Tests:**
+
+```sh
+DATABASE_URL="postgres://droppr:1234@localhost:5432/droppr_test?sslmode=disable" go test -v -run TestServe
+
+```
+
+**Run Only SignalChannel / WebSocket Tests:**
+
+```sh
+DATABASE_URL="postgres://droppr:1234@localhost:5432/droppr_test?sslmode=disable" go test -v -run TestSignal
+
+```

@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { AppWindow } from "./components";
+
+import { AppWindow } from "@/layouts";
+import { Button } from "@/components";
 
 export function ShowError() {
   const [error, setError] = useState("");
@@ -13,15 +15,12 @@ export function ShowError() {
   return (
     <AppWindow>
       <div className="flex flex-col justify-center items-center">
-        <img className="mb-2" src="/error.png" />
+        <img src="/error.png" className="mb-2" />
         <p className="text-2xl font-semibold">Error.</p>
         <p className="text-sm mb-4">{error}</p>
-        <a
-          className="text-lg bg-gray-700 hover:bg-gray-500 text-white px-4 py-2 rounded-xl mb-1"
-          href="/#"
-        >
+        <Button as="a" href="/#" scale="lg" className="mb-1">
           Go Back
-        </a>
+        </Button>
       </div>
     </AppWindow>
   );

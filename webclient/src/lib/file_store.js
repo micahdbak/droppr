@@ -7,7 +7,7 @@ const DB_VERSION = 4;
 export class FileStore extends EventTarget {
   _database; // the database
   _offset = 0;
-  error;
+  error = null;
 
   constructor() {
     super();
@@ -175,4 +175,37 @@ export class FileStore extends EventTarget {
     this._database?.close();
     this._database = null;
   }
+}
+
+// singleton
+let fileStore = null;
+
+export async function getFileStore(progress = () => {}) {
+  if (window.showSaveFilePicker) {
+    return null;
+  }
+
+  if (fileStore !== null) {
+    return new Promise((resolve) => {
+      resolve(fileStore);
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    fileStore = new FileStore();
+
+    fileStore.addEventListener("openerror", () => {
+      reject(fileStore.error);
+    });
+
+    fileStore.addEventListener("open", async () => {
+      try {
+        await fileStore.clear(progress);
+      } catch (err) {
+        reject(err);
+      }
+
+      resolve(fileStore);
+    });
+  });
 }

@@ -6,7 +6,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
     "format": "prettier --write .",
@@ -19,9 +19,9 @@
     "@fortawesome/free-solid-svg-icons": "^6.6.0",
     "@fortawesome/react-fontawesome": "^0.2.2",
     "axios": "^1.7.7",
+    "qr-code-styling": "^1.6.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router": "^7.18.2"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -35,7 +35,13 @@
     "globals": "^17.11.0",
     "postcss": "^8.4.49",
     "prettier": "^3.9.6",
+    "prettier-plugin-classnames": "^0.10.4",
     "tailwindcss": "^3.4.13",
     "vite": "^6.0.5"
+  },
+  "prettier": {
+    "plugins": [
+      "prettier-plugin-classnames"
+    ]
   }
 }
