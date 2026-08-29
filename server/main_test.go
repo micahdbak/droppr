@@ -16,12 +16,12 @@ import (
 // ----------------------------------------------------------------
 
 // init test database for test
-func initDB(t *testing.T) {
+func initDB(t *testing.T) *http.ServeMux {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		t.Skip("DATABASE_URL not set, skipping integration test")
+		dbURL = "postgres://localhost:5432/droppr_test"
 	}
-	
+
 	if db == nil {
 		var err error
 		db, err = pgxpool.New(context.Background(), dbURL)
@@ -35,16 +35,18 @@ func initDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to clear tables: %v", err)
 	}
+
+	return setupRouter(nil)
 }
 
 // 1. /api/check
 func TestServeCheck(t *testing.T) {
-	initDB(t)
+	router := initDB(t)
 
 	// Happy Path: GET request with no session cookies
 	req, _ := http.NewRequest("GET", "/api/check", nil)
 	rr := httptest.NewRecorder()
-	serveCheck(rr, req)
+	router.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("Happy Path: expected 200, got %v", status)
 	}
@@ -52,9 +54,9 @@ func TestServeCheck(t *testing.T) {
 	// Error Path 1: Non-GET request
 	reqPost, _ := http.NewRequest("POST", "/api/check", nil)
 	rrPost := httptest.NewRecorder()
-	serveCheck(rrPost, reqPost)
-	if status := rrPost.Code; status != http.StatusBadRequest {
-		t.Errorf("Error Path (Non-GET): expected 400, got %v", status)
+	router.ServeHTTP(rrPost, reqPost)
+	if status := rrPost.Code; status != http.StatusMethodNotAllowed && status != http.StatusBadRequest {
+		t.Errorf("Error Path (Non-GET): expected 405 or 400, got %v", status)
 	}
 
 	// Error Path 2: GET request with existing session cookies
@@ -62,7 +64,7 @@ func TestServeCheck(t *testing.T) {
 	reqCookies.AddCookie(&http.Cookie{Name: "drop_id", Value: "test-id-123"})
 	reqCookies.AddCookie(&http.Cookie{Name: "drop_role", Value: "dropper"})
 	rrCookies := httptest.NewRecorder()
-	serveCheck(rrCookies, reqCookies)
+	router.ServeHTTP(rrCookies, reqCookies)
 	if status := rrCookies.Code; status != http.StatusConflict {
 		t.Errorf("Error Path (Has Cookies): expected 409, got %v", status)
 	}
@@ -70,7 +72,7 @@ func TestServeCheck(t *testing.T) {
 
 // 2. /api/status
 func TestServeStatus(t *testing.T) {
-	initDB(t)
+	router := initDB(t)
 
 	// Insert a completed drop to test count
 	_, err := db.Exec(context.Background(), "INSERT INTO drops(id, code, file_name, file_size, file_type, is_complete) VALUES(gen_random_uuid(), 'AAAAAA', 'test.txt', 100, 'text/plain', 't')")
@@ -81,36 +83,36 @@ func TestServeStatus(t *testing.T) {
 	// Happy Path
 	req, _ := http.NewRequest("GET", "/api/status", nil)
 	rr := httptest.NewRecorder()
-	serveStatus(rr, req)
-	
+	router.ServeHTTP(rr, req)
+
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("Happy Path: expected 200, got %v", status)
 	}
-	expectedBody := `{"drops": 1}`
-	if rr.Body.String() != expectedBody {
-		t.Errorf("Happy Path: expected body %s, got %s", expectedBody, rr.Body.String())
+	var resp map[string]int64
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil || resp["drops"] != 1 {
+		t.Errorf("Happy Path: expected {'drops': 1}, got %s", rr.Body.String())
 	}
 
 	// Error Path: Non-GET
 	reqPost, _ := http.NewRequest("POST", "/api/status", nil)
 	rrPost := httptest.NewRecorder()
-	serveStatus(rrPost, reqPost)
-	if status := rrPost.Code; status != http.StatusBadRequest {
-		t.Errorf("Error Path (Non-GET): expected 400, got %v", status)
+	router.ServeHTTP(rrPost, reqPost)
+	if status := rrPost.Code; status != http.StatusMethodNotAllowed && status != http.StatusBadRequest {
+		t.Errorf("Error Path (Non-GET): expected 405 or 400, got %v", status)
 	}
 }
 
 // 3. /api/register
 func TestServeRegister(t *testing.T) {
-	initDB(t)
+	router := initDB(t)
 
 	// Happy Path
 	fileData := File{Name: "test.pdf", Size: 1024, Type: "application/pdf"}
 	body, _ := json.Marshal(fileData)
 	req, _ := http.NewRequest("POST", "/api/register", bytes.NewBuffer(body))
 	rr := httptest.NewRecorder()
-	
-	serveRegister(rr, req)
+
+	router.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("Happy Path: expected 200, got %v", status)
@@ -137,18 +139,28 @@ func TestServeRegister(t *testing.T) {
 		t.Errorf("Happy Path: invalid cookies set")
 	}
 
-	// Error Path: Bad JSON
+	// Error Path 1: Bad JSON
 	reqBad, _ := http.NewRequest("POST", "/api/register", bytes.NewBufferString("{bad json"))
 	rrBad := httptest.NewRecorder()
-	serveRegister(rrBad, reqBad)
+	router.ServeHTTP(rrBad, reqBad)
 	if status := rrBad.Code; status != http.StatusBadRequest {
 		t.Errorf("Error Path (Bad JSON): expected 400, got %v", status)
+	}
+
+	// Error Path 2: Invalid Payload (empty fields)
+	badPayload := File{Name: "", Size: 0, Type: ""}
+	badPayloadBody, _ := json.Marshal(badPayload)
+	reqInvalid, _ := http.NewRequest("POST", "/api/register", bytes.NewBuffer(badPayloadBody))
+	rrInvalid := httptest.NewRecorder()
+	router.ServeHTTP(rrInvalid, reqInvalid)
+	if status := rrInvalid.Code; status != http.StatusBadRequest {
+		t.Errorf("Error Path (Invalid Payload): expected 400, got %v", status)
 	}
 }
 
 // 4. /api/peek/:drop_id
 func TestServePeek(t *testing.T) {
-	initDB(t)
+	router := initDB(t)
 
 	// Setup drop
 	var dropID string
@@ -160,19 +172,19 @@ func TestServePeek(t *testing.T) {
 	// Happy Path
 	req, _ := http.NewRequest("GET", "/api/peek/PEEK12", nil)
 	rr := httptest.NewRecorder()
-	servePeek(rr, req)
+	router.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("Happy Path: expected 200, got %v", status)
 	}
 	if !strings.Contains(rr.Body.String(), "peek.txt") {
-		t.Errorf("Happy Path: expected file info in body")
+		t.Errorf("Happy Path: expected file info in body, got %s", rr.Body.String())
 	}
 
 	// Error Path 1: Invalid Regex
 	reqRegex, _ := http.NewRequest("GET", "/api/peek/BAD", nil)
 	rrRegex := httptest.NewRecorder()
-	servePeek(rrRegex, reqRegex)
+	router.ServeHTTP(rrRegex, reqRegex)
 	if status := rrRegex.Code; status != http.StatusBadRequest {
 		t.Errorf("Error Path (Regex): expected 400, got %v", status)
 	}
@@ -180,7 +192,7 @@ func TestServePeek(t *testing.T) {
 	// Error Path 2: Not Found
 	reqNotFound, _ := http.NewRequest("GET", "/api/peek/NONONO", nil)
 	rrNotFound := httptest.NewRecorder()
-	servePeek(rrNotFound, reqNotFound)
+	router.ServeHTTP(rrNotFound, reqNotFound)
 	if status := rrNotFound.Code; status != http.StatusNotFound {
 		t.Errorf("Error Path (NotFound): expected 404, got %v", status)
 	}
@@ -188,7 +200,7 @@ func TestServePeek(t *testing.T) {
 
 // 5. /api/claim/:drop_id
 func TestServeClaim(t *testing.T) {
-	initDB(t)
+	router := initDB(t)
 
 	// Setup drop
 	var dropID string
@@ -200,12 +212,12 @@ func TestServeClaim(t *testing.T) {
 	// Happy Path
 	req, _ := http.NewRequest("POST", "/api/claim/CLAIM1", nil)
 	rr := httptest.NewRecorder()
-	serveClaim(rr, req)
+	router.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("Happy Path: expected 200, got %v", status)
 	}
-	
+
 	// Ensure cookies are set
 	cookies := rr.Result().Cookies()
 	var role string
@@ -221,7 +233,7 @@ func TestServeClaim(t *testing.T) {
 	// Error Path: Already Claimed
 	reqClaimed, _ := http.NewRequest("POST", "/api/claim/CLAIM1", nil)
 	rrClaimed := httptest.NewRecorder()
-	serveClaim(rrClaimed, reqClaimed)
+	router.ServeHTTP(rrClaimed, reqClaimed)
 	if status := rrClaimed.Code; status != http.StatusNotFound {
 		t.Errorf("Error Path (Already Claimed): expected 404, got %v", status)
 	}
@@ -229,7 +241,7 @@ func TestServeClaim(t *testing.T) {
 
 // 6. /api/cleanup
 func TestServeCleanup(t *testing.T) {
-	initDB(t)
+	router := initDB(t)
 
 	// Setup drop
 	var dropID string
@@ -243,12 +255,12 @@ func TestServeCleanup(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: "drop_id", Value: dropID})
 	req.AddCookie(&http.Cookie{Name: "drop_role", Value: "dropper"})
 	rr := httptest.NewRecorder()
-	serveCleanup(rr, req)
+	router.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("Happy Path: expected 200, got %v", status)
 	}
-	
+
 	cookies := rr.Result().Cookies()
 	if len(cookies) < 2 {
 		t.Errorf("Happy Path: expected deleted cookies")

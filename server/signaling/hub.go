@@ -30,6 +30,21 @@ func NewHub() *Hub {
 	}
 }
 
+// ActiveChannels returns the number of currently active signaling channels.
+func (h *Hub) ActiveChannels() int {
+	h.channelsMux.Lock()
+	defer h.channelsMux.Unlock()
+	return len(h.channels)
+}
+
+// HasChannel reports whether a channel exists for the given dropID.
+func (h *Hub) HasChannel(dropID string) bool {
+	h.channelsMux.Lock()
+	defer h.channelsMux.Unlock()
+	_, exists := h.channels[dropID]
+	return exists
+}
+
 // ServeWebSocket upgrades an HTTP connection to a WebSocket and handles signaling for a drop session.
 func (h *Hub) ServeWebSocket(w http.ResponseWriter, r *http.Request, dropID, role string) {
 	conn, err := upgrader.Upgrade(w, r, nil)

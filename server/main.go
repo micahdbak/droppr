@@ -21,6 +21,29 @@ import (
 // shared database connection
 var db *pgxpool.Pool
 
+func setupRouter(hub *signaling.Hub) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/check", serveCheck)
+	mux.HandleFunc("POST /api/claim/{code}", serveClaim)
+	mux.HandleFunc("POST /api/cleanup", serveCleanup)
+	mux.HandleFunc("GET /api/peek/{code}", servePeek)
+	mux.HandleFunc("POST /api/register", serveRegister)
+	mux.HandleFunc("GET /api/status", serveStatus)
+	if hub != nil {
+		mux.HandleFunc("GET /sc", func(w http.ResponseWriter, r *http.Request) {
+			setCORS(w)
+			id, role := getSessionFromCookies(r)
+			if len(id) == 0 || len(role) == 0 {
+				slog.Warn("invalid session in signal channel request")
+				writeHTTPError(w, http.StatusUnauthorized)
+				return
+			}
+			hub.ServeWebSocket(w, r, id, role)
+		})
+	}
+	return mux
+}
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -46,23 +69,7 @@ func main() {
 	}
 	slog.Info("database connection established", "db_response", dbText)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/check", serveCheck)
-	mux.HandleFunc("POST /api/claim/{code}", serveClaim)
-	mux.HandleFunc("POST /api/cleanup", serveCleanup)
-	mux.HandleFunc("GET /api/peek/{code}", servePeek)
-	mux.HandleFunc("POST /api/register", serveRegister)
-	mux.HandleFunc("GET /api/status", serveStatus)
-	mux.HandleFunc("GET /sc", func(w http.ResponseWriter, r *http.Request) {
-		setCORS(w)
-		id, role := getSessionFromCookies(r)
-		if len(id) == 0 || len(role) == 0 {
-			slog.Warn("invalid session in signal channel request")
-			writeHTTPError(w, http.StatusUnauthorized)
-			return
-		}
-		hub.ServeWebSocket(w, r, id, role)
-	})
+	mux := setupRouter(hub)
 
 	srv := &http.Server{
 		Addr:    ":5050",

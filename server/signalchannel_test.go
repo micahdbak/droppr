@@ -7,28 +7,28 @@ import (
 	"testing"
 	"time"
 
+	"server/signaling"
+
 	"github.com/gorilla/websocket"
 )
 
 // ----------------------------------------------------------------
 
-/*
-* Verifies that message relaying between two peers in the same session actually works
-*/
+// TestSignalChannelRelay verifies that message relaying between two peers in the same session works.
 func TestSignalChannelRelay(t *testing.T) {
-	// Initialize global state for the test
-	signalChannels = make(map[string]*signalChannel)
-
-	server := httptest.NewServer(http.HandlerFunc(serveSignalChannel))
+	hub := signaling.NewHub()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, role := getSessionFromCookies(r)
+		hub.ServeWebSocket(w, r, id, role)
+	}))
 	defer server.Close()
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
 
 	// Helper to connect a peer with mock cookies
 	connectPeer := func(role, dropId string) *websocket.Conn {
-		req, _ := http.NewRequest("GET", wsURL, nil)
-		req.AddCookie(&http.Cookie{Name: "drop_id", Value: dropId})
-		req.AddCookie(&http.Cookie{Name: "drop_role", Value: role})
-		ws, _, err := websocket.DefaultDialer.Dial(wsURL, req.Header)
+		header := http.Header{}
+		header.Add("Cookie", "drop_id="+dropId+"; drop_role="+role)
+		ws, _, err := websocket.DefaultDialer.Dial(wsURL, header)
 		if err != nil {
 			t.Fatalf("Failed to dial %s: %v", role, err)
 		}
@@ -52,46 +52,45 @@ func TestSignalChannelRelay(t *testing.T) {
 	}
 }
 
-/*
-* Verifies that a signal channel is cleaned up after both peers disconnect
-*/
+// TestSignalChannelCleanup verifies that a signal channel is cleaned up after both peers disconnect.
 func TestSignalChannelCleanup(t *testing.T) {
-	signalChannels = make(map[string]*signalChannel)
-	server := httptest.NewServer(http.HandlerFunc(serveSignalChannel))
+	hub := signaling.NewHub()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, role := getSessionFromCookies(r)
+		hub.ServeWebSocket(w, r, id, role)
+	}))
 	defer server.Close()
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
 
 	// Connect both peers
-	req := http.Header{}
-	req.Add("Cookie", "drop_id=cleanup_test; drop_role=dropper")
-	dropper, _, _ := websocket.DefaultDialer.Dial(wsURL, req)
-
-	req2 := http.Header{}
-	req2.Add("Cookie", "drop_id=cleanup_test; drop_role=receiver")
-	receiver, _, _ := websocket.DefaultDialer.Dial(wsURL, req2)
-
-	// Verify room was created
-	signalChannelsMux.Lock()
-	if _, exists := signalChannels["cleanup_test"]; !exists {
-		t.Errorf("Expected room to exist in map")
+	headerDropper := http.Header{}
+	headerDropper.Add("Cookie", "drop_id=cleanup_test; drop_role=dropper")
+	dropper, _, err := websocket.DefaultDialer.Dial(wsURL, headerDropper)
+	if err != nil {
+		t.Fatalf("Failed to connect dropper: %v", err)
 	}
-	signalChannelsMux.Unlock()
+
+	headerReceiver := http.Header{}
+	headerReceiver.Add("Cookie", "drop_id=cleanup_test; drop_role=receiver")
+	receiver, _, err := websocket.DefaultDialer.Dial(wsURL, headerReceiver)
+	if err != nil {
+		t.Fatalf("Failed to connect receiver: %v", err)
+	}
+
+	// Verify channel was created
+	if !hub.HasChannel("cleanup_test") {
+		t.Errorf("Expected channel to exist in hub")
+	}
 
 	// Disconnect both
-	if dropper != nil {
-		dropper.Close()
-	}
-	if receiver != nil {
-		receiver.Close()
-	}
+	dropper.Close()
+	receiver.Close()
 
 	// Yield briefly to allow server-side defers to execute
 	time.Sleep(50 * time.Millisecond)
 
-	// Verify room was garbage collected
-	signalChannelsMux.Lock()
-	if _, exists := signalChannels["cleanup_test"]; exists {
-		t.Errorf("Expected room to be deleted from map after disconnects")
+	// Verify channel was garbage collected
+	if hub.HasChannel("cleanup_test") {
+		t.Errorf("Expected channel to be deleted from hub after disconnects")
 	}
-	signalChannelsMux.Unlock()
 }
