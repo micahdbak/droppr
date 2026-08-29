@@ -24,8 +24,8 @@ export function UnsafeState() {
       >
         <p className="text-lg font-semibold">A drop may be in progress.</p>
         <p className="text-sm text-gray-600">
-          Your browser suggests a drop is already in progress.
-          Continuing <b>WILL BREAK</b> an in-progress drop.
+          Your browser suggests a drop is already in progress. Continuing{" "}
+          <b>WILL BREAK</b> an in-progress drop.
         </p>
         <p className="text-xs text-gray-400">
           (Close this tab if you changed your mind.)
