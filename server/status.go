@@ -1,14 +1,9 @@
-// status.go
-
 package main
 
 import (
 	"net/http"
 )
 
-// ----------------------------------------------------------------
-
-// Checks the status of the entire website
 func serveStatus(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 

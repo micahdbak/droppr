@@ -1,5 +1,3 @@
-// cleanup.go
-
 package main
 
 import (
@@ -9,24 +7,14 @@ import (
 	"time"
 )
 
-// ----------------------------------------------------------------
-
 func completeDrop(ctx context.Context, dropId string) error {
 	_, err := db.Exec(ctx, "UPDATE drops SET is_complete = 't' WHERE id = $1", dropId)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
-// ----------------------------------------------------------------
-
-// Clean up cookies
 func serveCleanup(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 
-	// delete the drop_id cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "drop_id",
 		Value:    "",
@@ -36,7 +24,6 @@ func serveCleanup(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	// delete the drop_role cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "drop_role",
 		Value:    "",
@@ -49,8 +36,8 @@ func serveCleanup(w http.ResponseWriter, r *http.Request) {
 	id, _ := getSessionFromCookies(r)
 	if len(id) > 0 {
 		if err := completeDrop(r.Context(), id); err != nil {
-			slog.Warn("failed to mark drop complete during cleanup", "drop_id", id, "error", err)
 			// don't report this error to the requester; as far as they are concerned, the cookies were deleted properly
+			slog.Warn("failed to mark drop complete during cleanup", "drop_id", id, "error", err)
 		} else {
 			slog.Info("completed drop", "drop_id", id)
 		}

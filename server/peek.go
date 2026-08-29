@@ -1,5 +1,3 @@
-// peek.go
-
 package main
 
 import (
@@ -7,9 +5,6 @@ import (
 	"net/http"
 )
 
-// ----------------------------------------------------------------
-
-// Peeks at the fileinfo for a drop
 func servePeek(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 
