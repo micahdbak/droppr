@@ -21,7 +21,7 @@ import (
 // shared database connection
 var db *pgxpool.Pool
 
-func setupRouter(hub *signaling.Hub) *http.ServeMux {
+func setupRouter(sig *signaling.Server) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/check", serveCheck)
 	mux.HandleFunc("POST /api/claim/{code}", serveClaim)
@@ -29,18 +29,11 @@ func setupRouter(hub *signaling.Hub) *http.ServeMux {
 	mux.HandleFunc("GET /api/peek/{code}", servePeek)
 	mux.HandleFunc("POST /api/register", serveRegister)
 	mux.HandleFunc("GET /api/status", serveStatus)
-	if hub != nil {
-		mux.HandleFunc("GET /sc", func(w http.ResponseWriter, r *http.Request) {
-			setCORS(w)
-			id, role := getSessionFromCookies(r)
-			if len(id) == 0 || len(role) == 0 {
-				slog.Warn("invalid session in signal channel request")
-				writeHTTPError(w, http.StatusUnauthorized)
-				return
-			}
-			hub.ServeWebSocket(w, r, id, role)
-		})
+
+	if sig != nil {
+		mux.HandleFunc("GET /sc", sig.Handler(getSessionFromCookies))
 	}
+
 	return mux
 }
 
@@ -48,11 +41,10 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	hub := signaling.NewHub()
+	sig := signaling.NewServer()
 
 	slog.Info("~~ droppr server ~~")
 
-	// connect to database
 	var err error
 	db, err = pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
@@ -69,7 +61,7 @@ func main() {
 	}
 	slog.Info("database connection established", "db_response", dbText)
 
-	mux := setupRouter(hub)
+	mux := setupRouter(sig)
 
 	srv := &http.Server{
 		Addr:    ":5050",

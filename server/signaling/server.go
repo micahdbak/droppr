@@ -17,36 +17,48 @@ var upgrader = ws.Upgrader{
 	},
 }
 
-// Hub manages active WebRTC signaling channels between peers.
-type Hub struct {
+type SessionFunc func(r *http.Request) (id string, role string)
+
+type Server struct {
 	channels    map[string]*channel
 	channelsMux sync.Mutex
 }
 
-// NewHub creates a new signaling Hub.
-func NewHub() *Hub {
-	return &Hub{
+func NewServer() *Server {
+	return &Server{
 		channels: make(map[string]*channel),
 	}
 }
 
-// ActiveChannels returns the number of currently active signaling channels.
-func (h *Hub) ActiveChannels() int {
-	h.channelsMux.Lock()
-	defer h.channelsMux.Unlock()
-	return len(h.channels)
+func (s *Server) ActiveChannels() int {
+	s.channelsMux.Lock()
+	defer s.channelsMux.Unlock()
+	return len(s.channels)
 }
 
-// HasChannel reports whether a channel exists for the given dropID.
-func (h *Hub) HasChannel(dropID string) bool {
-	h.channelsMux.Lock()
-	defer h.channelsMux.Unlock()
-	_, exists := h.channels[dropID]
+func (s *Server) HasChannel(dropID string) bool {
+	s.channelsMux.Lock()
+	defer s.channelsMux.Unlock()
+	_, exists := s.channels[dropID]
 	return exists
 }
 
-// ServeWebSocket upgrades an HTTP connection to a WebSocket and handles signaling for a drop session.
-func (h *Hub) ServeWebSocket(w http.ResponseWriter, r *http.Request, dropID, role string) {
+func (s *Server) Handler(getSession SessionFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		id, role := getSession(r)
+		if id == "" || role == "" {
+			slog.Warn("invalid session in signal channel request")
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		s.ServeWebSocket(w, r, id, role)
+	}
+}
+
+func (s *Server) ServeWebSocket(w http.ResponseWriter, r *http.Request, dropID, role string) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		slog.Error("failed to upgrade websocket connection", "error", err)
@@ -54,19 +66,17 @@ func (h *Hub) ServeWebSocket(w http.ResponseWriter, r *http.Request, dropID, rol
 	}
 	defer conn.Close()
 
-	// get or create signal channel for this dropID
-	h.channelsMux.Lock()
-	sc, exists := h.channels[dropID]
+	s.channelsMux.Lock()
+	sc, exists := s.channels[dropID]
 	if !exists {
 		sc = &channel{
-			id:  dropID,
-			hub: h,
+			id:     dropID,
+			server: s,
 		}
-		h.channels[dropID] = sc
+		s.channels[dropID] = sc
 	}
-	h.channelsMux.Unlock()
+	s.channelsMux.Unlock()
 
-	// connect peer to channel
 	if !sc.connect(role, conn) {
 		conn.WriteMessage(ws.TextMessage, []byte(`{"status":"busy"}`))
 		slog.Error("peer role already connected", "role", role, "drop_id", dropID)

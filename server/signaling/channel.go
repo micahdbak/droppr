@@ -6,12 +6,11 @@ import (
 	ws "github.com/gorilla/websocket"
 )
 
-// channel represents an active signaling channel between two peers for a specific drop.
 type channel struct {
 	id       string
 	dropper  *ws.Conn
 	receiver *ws.Conn
-	hub      *Hub
+	server   *Server
 	mux      sync.Mutex
 }
 
@@ -43,13 +42,13 @@ func (c *channel) disconnect(role string) {
 		c.receiver = nil
 	}
 
-	// if both peers are disconnected, safely remove channel from hub map
+	// if both peers are disconnected, safely remove channel from server map
 	if c.dropper == nil && c.receiver == nil {
-		c.hub.channelsMux.Lock()
+		c.server.channelsMux.Lock()
 		// verify the channel in the map is still this exact instance before deleting
-		if c.hub.channels[c.id] == c {
-			delete(c.hub.channels, c.id)
+		if c.server.channels[c.id] == c {
+			delete(c.server.channels, c.id)
 		}
-		c.hub.channelsMux.Unlock()
+		c.server.channelsMux.Unlock()
 	}
 }
