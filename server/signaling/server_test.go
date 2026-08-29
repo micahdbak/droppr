@@ -1,20 +1,26 @@
 package signaling
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
+	"github.com/coder/websocket"
 )
 
 func connectPeer(t *testing.T, wsURL, role, dropID string) *websocket.Conn {
 	t.Helper()
 	header := http.Header{}
 	header.Add("Cookie", "drop_id="+dropID+"; drop_role="+role)
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, header)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, _, err := websocket.Dial(ctx, wsURL, &websocket.DialOptions{
+		HTTPHeader: header,
+	})
 	if err != nil {
 		t.Fatalf("Failed to dial %s: %v", role, err)
 	}
@@ -44,25 +50,30 @@ func TestServerRelay(t *testing.T) {
 	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http")
 
 	dropper := connectPeer(t, wsURL, "dropper", "relay_test")
-	defer dropper.Close()
+	defer dropper.CloseNow()
 
 	receiver := connectPeer(t, wsURL, "receiver", "relay_test")
-	defer receiver.Close()
+	defer receiver.CloseNow()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 
 	testMsg := []byte(`{"type":"offer","sdp":"fake"}`)
-	dropper.WriteMessage(websocket.TextMessage, testMsg)
+	if err := dropper.Write(ctx, websocket.MessageText, testMsg); err != nil {
+		t.Fatalf("failed to write message from dropper: %v", err)
+	}
 
-	receiver.SetReadDeadline(time.Now().Add(1 * time.Second))
-	_, msg, err := receiver.ReadMessage()
+	_, msg, err := receiver.Read(ctx)
 	if err != nil || string(msg) != string(testMsg) {
 		t.Fatalf("Expected %s, got %s (err: %v)", testMsg, msg, err)
 	}
 
 	replyMsg := []byte(`{"type":"answer","sdp":"fake_answer"}`)
-	receiver.WriteMessage(websocket.TextMessage, replyMsg)
+	if err := receiver.Write(ctx, websocket.MessageText, replyMsg); err != nil {
+		t.Fatalf("failed to write message from receiver: %v", err)
+	}
 
-	dropper.SetReadDeadline(time.Now().Add(1 * time.Second))
-	_, msg, err = dropper.ReadMessage()
+	_, msg, err = dropper.Read(ctx)
 	if err != nil || string(msg) != string(replyMsg) {
 		t.Fatalf("Expected %s, got %s (err: %v)", replyMsg, msg, err)
 	}
@@ -84,8 +95,8 @@ func TestServerChannelCleanup(t *testing.T) {
 		t.Fatalf("Expected 1 active channel, got %d", sig.ActiveChannels())
 	}
 
-	dropper.Close()
-	receiver.Close()
+	dropper.CloseNow()
+	receiver.CloseNow()
 
 	time.Sleep(50 * time.Millisecond)
 
@@ -104,13 +115,15 @@ func TestServerDuplicateRole(t *testing.T) {
 	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http")
 
 	dropper1 := connectPeer(t, wsURL, "dropper", "dup_test")
-	defer dropper1.Close()
+	defer dropper1.CloseNow()
 
 	dropper2 := connectPeer(t, wsURL, "dropper", "dup_test")
-	defer dropper2.Close()
+	defer dropper2.CloseNow()
 
-	dropper2.SetReadDeadline(time.Now().Add(1 * time.Second))
-	_, msg, err := dropper2.ReadMessage()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	_, msg, err := dropper2.Read(ctx)
 	if err != nil {
 		t.Fatalf("Expected busy message, got error: %v", err)
 	}

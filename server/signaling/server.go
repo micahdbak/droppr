@@ -6,16 +6,8 @@ import (
 	"net/http"
 	"sync"
 
-	ws "github.com/gorilla/websocket"
+	"github.com/coder/websocket"
 )
-
-var upgrader = ws.Upgrader{
-	ReadBufferSize:  0,
-	WriteBufferSize: 0,
-	CheckOrigin: func(r *http.Request) bool {
-		return true // dev mode
-	},
-}
 
 type SessionFunc func(r *http.Request) (id string, role string)
 
@@ -59,12 +51,14 @@ func (s *Server) Handler(getSession SessionFunc) http.HandlerFunc {
 }
 
 func (s *Server) ServeWebSocket(w http.ResponseWriter, r *http.Request, dropID, role string) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		OriginPatterns: []string{"*"}, // dev mode
+	})
 	if err != nil {
-		slog.Error("failed to upgrade websocket connection", "error", err)
+		slog.Error("failed to accept websocket connection", "error", err)
 		return
 	}
-	defer conn.Close()
+	defer conn.CloseNow()
 
 	s.channelsMux.Lock()
 	sc, exists := s.channels[dropID]
@@ -78,14 +72,14 @@ func (s *Server) ServeWebSocket(w http.ResponseWriter, r *http.Request, dropID, 
 	s.channelsMux.Unlock()
 
 	if !sc.connect(role, conn) {
-		conn.WriteMessage(ws.TextMessage, []byte(`{"status":"busy"}`))
+		conn.Write(r.Context(), websocket.MessageText, []byte(`{"status":"busy"}`))
 		slog.Error("peer role already connected", "role", role, "drop_id", dropID)
 		return
 	}
 	defer sc.disconnect(role)
 
 	for {
-		t, msg, err := conn.ReadMessage()
+		t, msg, err := conn.Read(r.Context())
 		if err != nil {
 			break
 		}
@@ -93,11 +87,11 @@ func (s *Server) ServeWebSocket(w http.ResponseWriter, r *http.Request, dropID, 
 		sc.mux.Lock()
 		var sendErr error
 		if role == "dropper" && sc.receiver != nil {
-			if sendErr = sc.receiver.WriteMessage(t, msg); sendErr != nil {
+			if sendErr = sc.receiver.Write(r.Context(), t, msg); sendErr != nil {
 				slog.Warn("failed to write message to receiver", "error", sendErr)
 			}
 		} else if role == "receiver" && sc.dropper != nil {
-			if sendErr = sc.dropper.WriteMessage(t, msg); sendErr != nil {
+			if sendErr = sc.dropper.Write(r.Context(), t, msg); sendErr != nil {
 				slog.Warn("failed to write message to dropper", "error", sendErr)
 			}
 		} else {
@@ -106,7 +100,7 @@ func (s *Server) ServeWebSocket(w http.ResponseWriter, r *http.Request, dropID, 
 
 		if sendErr != nil {
 			failedMsg := fmt.Sprintf(`{"status":"failed","data":%s}`, msg)
-			conn.WriteMessage(ws.TextMessage, []byte(failedMsg))
+			conn.Write(r.Context(), websocket.MessageText, []byte(failedMsg))
 		}
 		sc.mux.Unlock()
 	}

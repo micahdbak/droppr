@@ -3,18 +3,18 @@ package signaling
 import (
 	"sync"
 
-	ws "github.com/gorilla/websocket"
+	"github.com/coder/websocket"
 )
 
 type channel struct {
 	id       string
-	dropper  *ws.Conn
-	receiver *ws.Conn
+	dropper  *websocket.Conn
+	receiver *websocket.Conn
 	server   *Server
 	mux      sync.Mutex
 }
 
-func (c *channel) connect(role string, conn *ws.Conn) bool {
+func (c *channel) connect(role string, conn *websocket.Conn) bool {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
