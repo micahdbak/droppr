@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"context"
@@ -46,8 +46,8 @@ func getSessionFromCookies(r *http.Request) (string, string) {
 	return id.Value, role.Value
 }
 
-func insertSession(ctx context.Context, dropId string, dropRole string) error {
-	_, err := db.Exec(
+func (a *API) insertSession(ctx context.Context, dropId, dropRole string) error {
+	_, err := a.db.Exec(
 		ctx,
 		"INSERT INTO sessions(drop_id, drop_role) VALUES ($1, $2)",
 		dropId,
@@ -56,8 +56,8 @@ func insertSession(ctx context.Context, dropId string, dropRole string) error {
 	return err
 }
 
-func selectDropWithCode(ctx context.Context, code string) (File, string, error) {
-	row := db.QueryRow(
+func (a *API) selectDropWithCode(ctx context.Context, code string) (File, string, error) {
+	row := a.db.QueryRow(
 		ctx,
 		"SELECT id, file_name, file_size, file_type FROM drops WHERE code = $1 AND is_complete = 'f'",
 		code,
@@ -71,14 +71,14 @@ func selectDropWithCode(ctx context.Context, code string) (File, string, error) 
 	)
 	err := row.Scan(&id, &fileName, &fileSize, &fileType)
 	if err != nil {
-		return File{"", 0, ""}, "", err
+		return File{}, "", err
 	}
 
-	return File{fileName, fileSize, fileType}, id, nil
+	return File{Name: fileName, Size: fileSize, Type: fileType}, id, nil
 }
 
-func selectNumDropsComplete(ctx context.Context) (int64, error) {
-	row := db.QueryRow(
+func (a *API) selectNumDropsComplete(ctx context.Context) (int64, error) {
+	row := a.db.QueryRow(
 		ctx,
 		"SELECT COUNT(*) FROM drops WHERE is_complete='t'",
 	)
