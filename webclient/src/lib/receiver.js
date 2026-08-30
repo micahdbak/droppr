@@ -26,11 +26,13 @@ export class Receiver extends EventTarget {
    * @param {number} file.size
    * @param {string} file.type
    * @param {string} [file.href]
+   * @param {RTCIceServer[]} [turnServers]
    */
-  constructor(file, fileStore) {
+  constructor(file, fileStore, turnServers = []) {
     super(); // EventTarget
 
     this.file = file;
+    this._turnServers = turnServers;
 
     if (fileStore === null) {
       // Chromium-based browsers; use the File System Access API
@@ -55,7 +57,7 @@ export class Receiver extends EventTarget {
         suggestedName: this.file.name,
       });
       const writableStream = await fileHandle.createWritable();
-      this._peer = new Peer(false);
+      this._peer = new Peer(false, this._turnServers);
 
       // for UI informative purposes; peer will handle reconnection internally
       this._peer.addEventListener("error", (event) => {
@@ -98,7 +100,7 @@ export class Receiver extends EventTarget {
        * @type {FileStore}
        */
       const fileStore = this._fileStore;
-      this._peer = new Peer(false);
+      this._peer = new Peer(false, this._turnServers);
 
       // for UI informative purposes; peer will handle reconnection internally
       this._peer.addEventListener("error", (event) => {
@@ -117,8 +119,9 @@ export class Receiver extends EventTarget {
         const blob = await this._peer.receive();
 
         // write blob to file store
+        // the add must come before the offset update
         await fileStore.add(this.bytesReceived, blob);
-        this.bytesReceived += blob.size; // important that this comes after the above
+        this.bytesReceived += blob.size;
       }
 
       // no more blobs to receive; process file and download
@@ -180,9 +183,13 @@ export async function receiveFile(code, addEventListeners) {
 
   // will throw an error if the drop was not able to be claimed
   const res = await axios.post("/api/claim/" + code.toUpperCase());
+
   const file = res.data.file;
 
-  receiver = new Receiver(file, fileStore);
+  console.log("issued TURN credentials:", res.data.turn);
+  const turnServers = res.data.turn ? [res.data.turn] : [];
+
+  receiver = new Receiver(file, fileStore, turnServers);
 
   receiver.addEventListener("done", () => {
     receiver = null;

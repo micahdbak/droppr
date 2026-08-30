@@ -24,3 +24,7 @@ node_modules/
 dist/
 .vite/
 webclient/public/tailwind.css
+
+*.tar
+*.gz
+*.txt

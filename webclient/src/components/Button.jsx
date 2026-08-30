@@ -33,7 +33,12 @@ export function Button(props) {
     danger: "bg-red-700 hover:bg-red-500 text-white",
   }[variant];
 
-  const classes = `inline-flex items-center justify-center ${scaleClasses} ${variantClasses} ${className}`;
+  const classes = [
+    "inline-flex items-center justify-center",
+    scaleClasses,
+    variantClasses,
+    className,
+  ].join(" ");
 
   if (as === "a") {
     return (

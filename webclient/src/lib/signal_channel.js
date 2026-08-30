@@ -1,6 +1,7 @@
 const PING_RATE = 1000; // 1s
 
-const SC_URL = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/sc`;
+const SC_PROTOCOL = location.protocol === "https:" ? "wss" : "ws";
+const SC_URL = `${SC_PROTOCOL}://${location.host}/sc`;
 
 /**
  * dispatches error, connected, disconnected, message

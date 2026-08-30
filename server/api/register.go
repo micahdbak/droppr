@@ -28,7 +28,7 @@ func generateDropCode() (string, error) {
 	return string(bytes), nil
 }
 
-func (a *API) insertDrop(ctx context.Context, file File) (string, string, error) {
+func (a *API) insertDrop(ctx context.Context, file FileInfo) (string, string, error) {
 	// lest we enter an infinite loop, attempt this for a maximum of 5 tries
 	for ctr := 0; ctr < 5; ctr++ {
 		code, err := generateDropCode()
@@ -62,7 +62,7 @@ type registerResponse struct {
 func (a *API) serveRegister(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 
-	var file File
+	var file FileInfo
 	err := json.NewDecoder(r.Body).Decode(&file)
 	if err != nil {
 		slog.Warn("invalid register request body", "error", err)

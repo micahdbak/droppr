@@ -46,17 +46,15 @@ export class Dropper extends EventTarget {
       while (this.bytesSent < file.size) {
         // slice the file given the current offset
         const end = Math.min(this.bytesSent + MESSAGE_SIZE, file.size);
-        const blob = file.slice(this.bytesSent, end); // get blob from file at offset
+        const blob = file.slice(this.bytesSent, end);
 
         // send blob to peer
         await this._peer.send(blob);
         this.bytesSent = end; // update offset for next loop
       }
 
-      // TODO: listen for Peer._dataChannel bufferedamountlow event before closing
-      await new Promise((resolve) => {
-        setTimeout(resolve, 5000); // 5 seconds
-      });
+      // let the last buffered messages drain before closing
+      await this._peer.drain();
       this._peer.close();
       this.dispatchEvent(new Event("done"));
     } catch (err) {
