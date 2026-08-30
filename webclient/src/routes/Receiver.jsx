@@ -43,7 +43,16 @@ export function Receiver(props) {
         }
       } catch (err) {
         if (!cancelled) {
-          sessionStorage.setItem("error", errorToString(err));
+          if (err.response && err.response.status === 404) {
+            sessionStorage.setItem(
+              "error",
+              `No drop exists for drop code "${code}".`,
+            );
+          } else {
+            sessionStorage.setItem("error", errorToString(err));
+          }
+
+          window.location.hash = "error";
         }
       }
     };

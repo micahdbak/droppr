@@ -20,9 +20,18 @@ func TestServeRegister(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
 
-	var resp map[string]string
-	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil || len(resp["drop_code"]) != 6 {
+	var resp struct {
+		DropCode string           `json:"drop_code"`
+		Turn     *TurnCredentials `json:"turn"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("invalid response body: %v", err)
+	}
+	if len(resp.DropCode) != 6 {
 		t.Errorf("invalid drop_code in response: %v", resp)
+	}
+	if resp.Turn == nil || len(resp.Turn.URLs) == 0 || resp.Turn.Username == "" || resp.Turn.Credential == "" {
+		t.Errorf("invalid turn credentials in response: %v", resp.Turn)
 	}
 
 	cookies := rr.Result().Cookies()

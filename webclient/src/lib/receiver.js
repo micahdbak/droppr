@@ -183,6 +183,15 @@ export async function receiveFile(code, addEventListeners) {
   const file = res.data.file;
 
   receiver = new Receiver(file, fileStore);
+
+  receiver.addEventListener("done", () => {
+    receiver = null;
+  });
+
+  receiver.addEventListener("error", () => {
+    receiver = null;
+  });
+
   addEventListeners(receiver);
   return receiver;
 }

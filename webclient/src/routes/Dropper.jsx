@@ -12,6 +12,7 @@ const STATE_TRANSFER = 2;
 export function Dropper() {
   const [isWaiting, setIsWaiting] = useState(false);
   const [dropCode, setDropCode] = useState(null);
+  const [turnServers, setTurnServers] = useState([]);
   const [file, setFile] = useState(null);
 
   const [bytesSent, setBytesSent] = useState(0);
@@ -37,6 +38,7 @@ export function Dropper() {
             headers: { "Content-Type": "application/json" },
           });
           setDropCode(res.data.drop_code);
+          setTurnServers(res.data.turn ? [res.data.turn] : []);
           setIsWaiting(false); // stop displaying waiting screen
         } catch (err) {
           sessionStorage.setItem("error", err.toString());
@@ -104,7 +106,7 @@ export function Dropper() {
 
     try {
       // returns a singleton; safe to re-call
-      dropFile(file, addEventListeners);
+      dropFile(file, turnServers, addEventListeners);
     } catch (err) {
       sessionStorage.setItem("error", errorToString(err));
       window.location.hash = "error";

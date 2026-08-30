@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -31,6 +32,26 @@ func setupRouter(apiHandler *api.API, sig *signaling.Server) *http.ServeMux {
 	return mux
 }
 
+// when env vars are unset or half-configured, TURN is disabled.
+func turnConfigFromEnv() api.TurnConfig {
+	secret := strings.TrimSpace(os.Getenv("TURN_SECRET"))
+	urlsStr := strings.TrimSpace(os.Getenv("TURN_URLS"))
+
+	if (secret == "") != (urlsStr == "") {
+		slog.Warn("TURN_SECRET and TURN_URLS must both be set to enable TURN; disabling TURN")
+		return api.TurnConfig{}
+	}
+
+	var urls []string
+	for _, url := range strings.Split(urlsStr, ",") {
+		if url = strings.TrimSpace(url); url != "" {
+			urls = append(urls, url)
+		}
+	}
+
+	return api.TurnConfig{Secret: secret, URLs: urls}
+}
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -52,7 +73,11 @@ func main() {
 	}
 	slog.Info("database connection established", "db_response", dbText)
 
-	apiHandler := api.New(db)
+	turnConfig := turnConfigFromEnv()
+	if turnConfig.Enabled() {
+		slog.Info("TURN relay enabled;", "urls", turnConfig.URLs)
+	}
+	apiHandler := api.New(db, turnConfig)
 	sig := signaling.NewServer()
 	mux := setupRouter(apiHandler, sig)
 
