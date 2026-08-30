@@ -2,7 +2,53 @@
 
 ## server
 
-Go backend (HTTP API + WebRTC signaling).
+Go backend (HTTP API + WebRTC signaling). Listens on `:5050`; state lives in
+PostgreSQL (accessed via `pgx`), files never touch disk.
+
+### Commands
+
+Run from `server/`.
+
+- `go run .` - start the server (see `DATABASE_URL` in the README).
+- `gofmt -l .` - check formatting (no output means clean).
+- `go vet ./...` - static analysis.
+- `DATABASE_URL="postgres://droppr:1234@localhost:5432/droppr_test" go test ./...`
+  - run tests; the `droppr_test` database must exist (see the README).
+
+Always run `gofmt`, `go vet`, and `go test` after changes; fix all errors.
+
+### File layout
+
+One file per route under `api/`; signaling is a separate package.
+
+```
+server/
+- main.go      entry point; env config, router setup, graceful shutdown
+- schema.sql   PostgreSQL schema (drops, sessions)
+- api/         HTTP API handlers (one file per route, plus shared helpers)
+- signaling/   WebSocket signaling channel (content-agnostic relay)
+```
+
+### Conventions
+
+- Every source file is accompanied by a sibling `_test.go` file exercising it
+  (`api/register.go` -> `api/register_test.go`). Shared test setup (e.g. the
+  database-backed router) lives in the package-level `api_test.go`.
+- Comments should be utilitarian: always prefer renaming variables, functions,
+  types, etc., to make a comment redundant and the meaning of something
+  obvious.
+- Follow Go idioms: `gofmt`-clean, `go vet`-clean; doc comments on exported
+  identifiers; table-driven tests where several cases share a shape; prefer
+  pure functions (e.g. `turnCredentials`) so logic is testable without a
+  database; wrap errors with context instead of discarding them.
+- Configuration comes from the environment, is read once in `main.go`, and is
+  passed explicitly to constructors (`api.New`); no globals. A half-configured
+  optional feature is disabled with a `slog.Warn`, never a panic.
+- Handlers are registered in `api.go` with method-pattern paths, begin with
+  `setCORS`, log with `slog`, and respond through the shared `writeJSON` /
+  `writeHTTPError` helpers.
+- The `signaling` package is a content-agnostic message relay; it must not
+  gain knowledge of API concepts (drops, sessions, TURN, etc.).
 
 ## webclient
 
@@ -28,7 +74,7 @@ Always run `lint`, `build`, and `format:check` after changes; fix all errors.
 - Styling: Tailwind CSS; source `tailwind.css` (imported by `src/main.jsx`).
 - Lint: ESLint flat config (`eslint.config.js`), Prettier-compatible.
 - Format: Prettier with `prettier-plugin-classnames`, which auto-wraps
-  Tailwind class strings — do not hand-format long class strings.
+  Tailwind class strings; do not hand-format long class strings.
 
 ### File layout
 
@@ -113,3 +159,23 @@ functions/classes, and add `export * from "./name.js";` to `lib/index.js`.
 - Comments should be utilitarian: always prefer renaming variables, functions,
   classes, props, etc., to make a comment redundant and the meaning of something
   obvious.
+
+## documentation
+
+Applies to `README.md` and this file.
+
+- Keep documentation accurate against the source; verify claims (versions,
+  ports, commands, schema) against `go.mod`, `package.json`, `schema.sql`,
+  etc., before writing them.
+- Describe structure generically so features can change files without requiring
+  documentation changes; avoid enumerating files that may be added, renamed, or
+  removed. Where a concrete example helps, mark it as one ("e.g.").
+- Prose is utilitarian and to the point, assuming a technical reader with a
+  solid understanding of the domain; use correct terminology for the technology
+  (e.g. ICE, STUN/TURN, `pgx`) instead of explaining around it.
+- No marketing or filler language ("makes it easy", "note that", "handy");
+  state facts declaratively.
+- ASCII only; no em dashes. Use commas, semicolons, or separate sentences
+  instead.
+- Match the existing style: lowercase headings, fenced code blocks with the
+  language tag, and commands shown with the directory they run from.

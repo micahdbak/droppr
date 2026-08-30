@@ -14,20 +14,22 @@ export class Dropper extends EventTarget {
 
   /**
    * @param {File} file - the file to drop
+   * @param {RTCIceServer[]} [turnServers] - issued at register time
    */
-  constructor(file) {
+  constructor(file, turnServers = []) {
     super();
 
     // start dropping the file
-    this._dropFile(file);
+    this._dropFile(file, turnServers);
   }
 
   /**
    * @param {File} file
+   * @param {RTCIceServer[]} turnServers
    */
-  async _dropFile(file) {
+  async _dropFile(file, turnServers) {
     try {
-      this._peer = new Peer(true);
+      this._peer = new Peer(true, turnServers);
 
       // for UI informative purposes; peer will handle reconnection internally
       this._peer.addEventListener("error", (event) => {
@@ -71,15 +73,25 @@ let dropper = null;
 
 /**
  * @param {File} file
+ * @param {RTCIceServer[]} [turnServers]
  * @param {(dropper: Dropper) => void} addEventListeners
  * @returns {Dropper}
  */
-export function dropFile(file, addEventListeners) {
+export function dropFile(file, turnServers = [], addEventListeners) {
   if (dropper !== null) {
     return dropper;
   }
 
-  dropper = new Dropper(file);
+  dropper = new Dropper(file, turnServers);
+
+  dropper.addEventListener("done", () => {
+    dropper = null;
+  });
+
+  dropper.addEventListener("error", () => {
+    dropper = null;
+  });
+
   addEventListeners(dropper);
   return dropper;
 }

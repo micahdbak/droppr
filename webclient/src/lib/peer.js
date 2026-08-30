@@ -8,24 +8,14 @@ import { SignalChannel } from "./signal_channel.js";
  * @property {RTCIceCandidateInit|null} [candidate]
  */
 
-/**
- * @type {RTCConfiguration}
- */
-const RTC_CONFIGURATION = {
-  iceServers: [
-    {
-      urls: "stun:droppr.net:5051",
-    },
-    {
-      urls: [
-        "turn:droppr.net:5051?transport=udp",
-        "turn:droppr.net:5051?transport=tcp",
-      ],
-      username: "droppr",
-      credential: "droppr",
-    },
-  ],
-};
+// NOTE: 3478 is eturnal's default port
+const STUN_SERVERS = [
+  {
+    urls: `stun:${location.hostname}:3478`,
+  },
+];
+
+const FAILED_ATTEMPT_LIMIT = 3;
 
 const BATCH_SIZE = 32;
 
@@ -46,6 +36,8 @@ export class Peer extends EventTarget {
   _moreCandidates = true; // whether there are more ICE candidates
   _morePeerCandidates = true; // whether the peer has more ICE candidates
   _dataChannel = null; // data channel through which data is transferred
+  _turnError = null; // last ICE candidate error from a TURN server
+  _failedAttempts = 0;
 
   // state management for sending and receiving messages
   _isConnected = false; // whether or not the peer connection is live
@@ -58,8 +50,9 @@ export class Peer extends EventTarget {
 
   /**
    * @param {boolean} isDropper
+   * @param {RTCIceServer[]} [iceServers]
    */
-  constructor(isDropper) {
+  constructor(isDropper, iceServers = []) {
     super();
 
     this._isDropper = isDropper;
@@ -69,7 +62,9 @@ export class Peer extends EventTarget {
     this._signalChannelAddEventListeners();
 
     // init peer connection
-    this._peerConnection = new RTCPeerConnection(RTC_CONFIGURATION);
+    this._peerConnection = new RTCPeerConnection({
+      iceServers: [...STUN_SERVERS, ...iceServers],
+    });
     this._peerConnection.addEventListener(
       "negotiationneeded",
       this._onNegotiationNeeded.bind(this),
@@ -88,6 +83,11 @@ export class Peer extends EventTarget {
     );
     this._peerConnection.addEventListener("icecandidateerror", (event) => {
       console.error("ICE candidate error:", event);
+
+      // a TURN server rejecting our credentials is fatal when relay is required
+      if (typeof event.url === "string" && event.url.startsWith("turn:")) {
+        this._turnError = { code: event.errorCode, url: event.url };
+      }
     });
 
     // if dropper, this end should create the data channel
@@ -255,17 +255,19 @@ export class Peer extends EventTarget {
 
   _onIceConnectionStateChange() {
     try {
+      if (this._peerConnection === null) return;
+
       console.log(
         `ICE connection state change: ${this._peerConnection.iceConnectionState}`,
       );
 
-      if (
-        this._peerConnection.iceConnectionState === "disconnected" ||
-        this._peerConnection.iceConnectionState === "failed"
-      ) {
+      const state = this._peerConnection.iceConnectionState;
+      if (state === "disconnected") {
         this._isConnected = false;
         this._restart();
         this.dispatchEvent(new Event("disconnected"));
+      } else if (state === "failed") {
+        this._onIceFailed();
       }
     } catch (err) {
       this.close();
@@ -276,23 +278,61 @@ export class Peer extends EventTarget {
 
   _onConnectionStateChange() {
     try {
+      if (this._peerConnection === null) return;
+
       console.log(
         `Connection state change: ${this._peerConnection.connectionState}`,
       );
 
-      if (
-        this._peerConnection.connectionState === "disconnected" ||
-        this._peerConnection.connectionState === "failed"
-      ) {
+      const state = this._peerConnection.connectionState;
+      if (state === "disconnected") {
         this._isConnected = false;
         this._restart();
         this.dispatchEvent(new Event("disconnected"));
+      } else if (state === "failed") {
+        this._onIceFailed();
       }
     } catch (err) {
       this.close();
       this.error = err;
       this.dispatchEvent(new Event("error"));
     }
+  }
+
+  /**
+   * recover from an ICE failure, or close with a fatal error if retrying is hopeless
+   */
+  _onIceFailed() {
+    this._isConnected = false;
+
+    // a TURN server rejecting our credentials never recovers by retrying
+    if (this._turnError !== null) {
+      this._closeWithError(
+        new Error(
+          `TURN server rejected credentials (${this._turnError.code}) for ${this._turnError.url}`,
+        ),
+      );
+      return;
+    }
+
+    this._failedAttempts++;
+
+    if (this._failedAttempts >= FAILED_ATTEMPT_LIMIT) {
+      this._closeWithError(new Error("ICE connection failed"));
+      return;
+    }
+
+    this._restart();
+    this.dispatchEvent(new Event("disconnected"));
+  }
+
+  /**
+   * @param {Error} cause
+   */
+  _closeWithError(cause) {
+    this.close();
+    this.error = new Error("connection failed", { cause });
+    this.dispatchEvent(new Event("error"));
   }
 
   /**
@@ -336,6 +376,8 @@ export class Peer extends EventTarget {
       );
       this._state = STATE_READY;
       this._isConnected = true;
+      this._failedAttempts = 0;
+      this._turnError = null;
       this.dispatchEvent(new Event("connected"));
     } catch (err) {
       this.close();

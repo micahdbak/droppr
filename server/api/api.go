@@ -7,11 +7,12 @@ import (
 )
 
 type API struct {
-	db *pgxpool.Pool
+	db   *pgxpool.Pool
+	turn TurnConfig
 }
 
-func New(db *pgxpool.Pool) *API {
-	return &API{db: db}
+func New(db *pgxpool.Pool, turn TurnConfig) *API {
+	return &API{db: db, turn: turn}
 }
 
 func (a *API) RegisterRoutes(mux *http.ServeMux) {

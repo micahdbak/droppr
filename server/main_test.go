@@ -25,7 +25,7 @@ func TestSetupRouter(t *testing.T) {
 	}
 	defer db.Close()
 
-	apiHandler := api.New(db)
+	apiHandler := api.New(db, api.TurnConfig{})
 	sig := signaling.NewServer()
 	router := setupRouter(apiHandler, sig)
 

@@ -54,6 +54,11 @@ func (a *API) insertDrop(ctx context.Context, file File) (string, string, error)
 	return "", "", fmt.Errorf("couldn't insert drop after 5 tries")
 }
 
+type registerResponse struct {
+	DropCode string           `json:"drop_code"`
+	Turn     *TurnCredentials `json:"turn,omitempty"`
+}
+
 func (a *API) serveRegister(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 
@@ -101,6 +106,12 @@ func (a *API) serveRegister(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	writeJSON(w, http.StatusOK, map[string]string{"drop_code": code})
+	res := registerResponse{DropCode: code}
+	if a.turn.Enabled() {
+		credentials := turnCredentials(a.turn)
+		res.Turn = &credentials
+	}
+
+	writeJSON(w, http.StatusOK, res)
 	slog.Info("registered drop", "drop_id", id, "code", code)
 }

@@ -7,7 +7,7 @@ export function ShowError() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const errStr = sessionStorage.getItem("error");
+    const errStr = sessionStorage.getItem("error") ?? "Unknown error";
     console.log(errStr); // longer stack trace
     setError(errStr.split("\n")[0]); // just the first line (error message)
   }, []);

@@ -25,7 +25,7 @@ func initTestAPI(t *testing.T) (*API, *http.ServeMux) {
 		t.Fatalf("database cleanup failed: %v", err)
 	}
 
-	api := New(db)
+	api := New(db, TurnConfig{Secret: "test-secret", URLs: []string{"turn:localhost:3478?transport=udp"}})
 	mux := http.NewServeMux()
 	api.RegisterRoutes(mux)
 	return api, mux
