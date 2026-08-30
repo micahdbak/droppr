@@ -1,10 +1,12 @@
 /**
- * return a human readable string for a number of bytes, e.g., 1 B, 5.3 kB, 17 MB, 12 GB, ...
+ * return a human readable string for a number of bytes, e.g., 1 B, 5.3 kB,
+ * 17 MB, 12 GB, ...
  * @param {number} bytes
  * @returns {string}
  */
 export function bytesToString(bytes) {
-  const units = ["B", "kB", "MB", "GB", "TB"]; // I swear if someone sends a TB of data
+  // I swear if someone sends a TB of data
+  const units = ["B", "kB", "MB", "GB", "TB"];
   let unit = 0;
 
   while (bytes >= 1000 && unit < units.length - 1) {
@@ -16,7 +18,8 @@ export function bytesToString(bytes) {
 }
 
 /**
- * return a human readable string for a number of seconds, e.g., 1s, 5m 17s, 3h 15m, ...
+ * return a human readable string for a number of seconds, e.g., 1s, 5m 17s,
+ * 3h 15m, ...
  * @param {number} seconds
  * @returns {string}
  */
@@ -33,7 +36,7 @@ export function secondsToString(seconds) {
     str.push(`${hours}h`);
     if (minutes > 0) str.push(`${minutes}m`);
   } else {
-    // if took less than an hour, mention minutes, seconds, or minutes and seconds
+    // under an hour: mention minutes, seconds, or both
     if (minutes > 0) str.push(`${minutes}m`);
     if (seconds > 0) str.push(`${seconds}s`);
   }

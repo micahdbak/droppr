@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+type claimResponse struct {
+	File FileInfo         `json:"file"`
+	Turn *TurnCredentials `json:"turn,omitempty"`
+}
+
 func (a *API) serveClaim(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 
@@ -22,9 +27,15 @@ func (a *API) serveClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	res := claimResponse{File: file}
+	if a.turn.Enabled() {
+		credentials := turnCredentials(a.turn)
+		res.Turn = &credentials
+	}
+
 	id_, role := getSessionFromCookies(r)
 	if id == id_ && role == "receiver" {
-		writeJSON(w, http.StatusOK, map[string]File{"file": file})
+		writeJSON(w, http.StatusOK, res)
 		return
 	}
 
@@ -52,6 +63,6 @@ func (a *API) serveClaim(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	writeJSON(w, http.StatusOK, map[string]File{"file": file})
+	writeJSON(w, http.StatusOK, res)
 	slog.Info("claimed drop", "drop_id", id, "code", code)
 }

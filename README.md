@@ -182,9 +182,10 @@ go run .
 `TURN_SECRET` must match `secret:` in `/etc/eturnal.yml`. The server derives
 ephemeral credentials per the REST API for Access to TURN Services
 specification (username is the Unix expiry timestamp; the credential is
-`Base64(HMAC-SHA1(secret, username))`) and issues them to droppers at register
-time. Credentials are valid for four hours. When either variable is unset, no
-TURN credentials are issued and clients fall back to STUN/P2P only.
+`Base64(HMAC-SHA1(secret, username))`) and issues them to both peers: droppers
+at register time and receivers at claim time. Credentials are valid for four
+hours. When either variable is unset, no TURN credentials are issued and
+clients fall back to STUN/P2P only.
 
 The webclient derives its STUN/TURN server from the hostname it is served
 from (port `3478`); eturnal must therefore be reachable at the hostname
@@ -247,6 +248,93 @@ The dev server proxies `/api/*` and the `/sc` WebSocket to
 `http://localhost:5050`, so the Go server must be running. It also binds to
 all interfaces (`vite --host`), so other devices on the network can reach it;
 useful for testing transfers between two devices.
+
+## deployment
+
+Deployment targets a server host (named `droppr.net` here, with the user
+`droppr`). It assumes the software setup sections above are complete:
+PostgreSQL with the schema loaded, and eturnal running with its secret
+configured. Initial setup is performed once; the deploy steps are repeated
+for each redeployment.
+
+### initial setup
+
+Performed once, on a Debian/Ubuntu-based server, from a checkout of this
+repository:
+
+```sh
+sudo apt install nginx certbot python3-certbot-nginx
+sudo cp nginx.conf /etc/nginx/sites-available/droppr
+sudo ln -s /etc/nginx/sites-available/droppr /etc/nginx/sites-enabled/droppr
+sudo mkdir -p /var/www/droppr
+sudo systemctl enable nginx
+sudo systemctl start nginx
+sudo certbot --nginx
+```
+
+`nginx.conf` is an HTTP-only bootstrap: it serves `/var/www/droppr`, proxies
+`/api/` and the `/sc` WebSocket to the droppr server on `127.0.0.1:5050`, and
+caches static assets for a year.
+
+`certbot --nginx` issues a Let's Encrypt certificate for `droppr.net`, redirects
+HTTP to HTTPS (select this at the prompt), and rewrites the configuration in
+place to serve HTTPS.
+
+### local machine
+
+From a checkout of this repository:
+
+```sh
+# build and upload the server (cross-compiled for the server host)
+cd server
+GOOS=linux GOARCH=amd64 go build
+scp server droppr@droppr.net:
+
+# build and upload the webclient
+cd ../webclient
+rm -rf dist && bun run build
+tar -cf dist.tar dist
+scp dist.tar droppr@droppr.net:
+```
+
+### server machine
+
+The server runs in a tmux session, and the running process locks its binary,
+so stop it before replacing it:
+
+```sh
+ssh droppr@droppr.net
+export TERM=xterm   # if tmux reports an unsuitable terminal
+tmux attach         # session running the server; stop it with Ctrl+C, then detach
+```
+
+With the server stopped:
+
+```sh
+# deploy the webclient
+cd ~/droppr/webclient
+rm -rf dist
+tar -xf ~/dist.tar
+sudo rm -rf /var/www/droppr/*
+sudo cp -r dist/* /var/www/droppr/
+sudo systemctl restart nginx
+
+# replace the server binary
+cp ~/server ~/droppr/server/server
+rm ~/server
+```
+
+Restart the server in its tmux session, with the environment from the
+[TURN relay](#turn-relay-optional) section:
+
+```sh
+tmux attach
+cd ~/droppr/server
+DATABASE_URL=postgres://droppr:1234@localhost:5432/droppr \
+TURN_SECRET=long-and-cryptic \
+TURN_URLS=turn:droppr.net:3478?transport=udp,turn:droppr.net:3478?transport=tcp \
+./server
+```
 
 ## license
 

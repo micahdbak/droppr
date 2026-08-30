@@ -29,7 +29,7 @@ const STATE_WAITING = 1; // waiting for acknowledgement from peer
  */
 export class Peer extends EventTarget {
   // for facilitating the WebRTC peer connection
-  _isDropper = false; // whether this instance is the dropper (not the connected peer)
+  _isDropper = false; // whether this instance is the dropper
   _signalChannel = null; // the signal channel connection
   _peerConnection = null; // the WebRTC peer connection
   _iceRestart = false; // whether to restart the ICE gathering process
@@ -43,7 +43,8 @@ export class Peer extends EventTarget {
   _isConnected = false; // whether or not the peer connection is live
   _state = STATE_READY; // for Peer.send() and Peer.receive()
   _i = 0; // index of current message in a batch
-  _blob = new Blob([], { type: "application/octet-stream" }); // compiled blobs received from peer
+  // compiled blobs received from peer
+  _blob = new Blob([], { type: "application/octet-stream" });
   _count = 0;
 
   error = null;
@@ -84,8 +85,12 @@ export class Peer extends EventTarget {
     this._peerConnection.addEventListener("icecandidateerror", (event) => {
       console.error("ICE candidate error:", event);
 
-      // a TURN server rejecting our credentials is fatal when relay is required
-      if (typeof event.url === "string" && event.url.startsWith("turn:")) {
+      // a credential rejection is fatal
+      if (
+        typeof event.url === "string" &&
+        event.url.startsWith("turn:") &&
+        event.errorCode === 401
+      ) {
         this._turnError = { code: event.errorCode, url: event.url };
       }
     });
@@ -162,11 +167,11 @@ export class Peer extends EventTarget {
   }
 
   /**
-   * @param {MessageEvent & { data: SignalChannelMessage }} event - message sent from the signal channel to be processed
+   * @param {MessageEvent & { data: SignalChannelMessage }} event
    */
   async _onSignalChannelMessage(event) {
     try {
-      const message = event.data; // event.data is already parsed with JSON.parse
+      const message = event.data; // already parsed by the signal channel
 
       switch (message.type) {
         // received an RTC peer connection offer
@@ -258,17 +263,8 @@ export class Peer extends EventTarget {
       if (this._peerConnection === null) return;
 
       console.log(
-        `ICE connection state change: ${this._peerConnection.iceConnectionState}`,
+        `ICE connection state: ${this._peerConnection.iceConnectionState}`,
       );
-
-      const state = this._peerConnection.iceConnectionState;
-      if (state === "disconnected") {
-        this._isConnected = false;
-        this._restart();
-        this.dispatchEvent(new Event("disconnected"));
-      } else if (state === "failed") {
-        this._onIceFailed();
-      }
     } catch (err) {
       this.close();
       this.error = err;
@@ -285,12 +281,18 @@ export class Peer extends EventTarget {
       );
 
       const state = this._peerConnection.connectionState;
-      if (state === "disconnected") {
-        this._isConnected = false;
-        this._restart();
-        this.dispatchEvent(new Event("disconnected"));
-      } else if (state === "failed") {
-        this._onIceFailed();
+      if (state === "connected") {
+        // ICE may have self-recovered; restore liveness for send()/receive()
+        if (
+          !this._isConnected &&
+          this._dataChannel !== null &&
+          this._dataChannel.readyState === "open"
+        ) {
+          this._isConnected = true;
+          this.dispatchEvent(new Event("connected"));
+        }
+      } else if (state === "disconnected" || state === "failed") {
+        this._recover();
       }
     } catch (err) {
       this.close();
@@ -300,17 +302,17 @@ export class Peer extends EventTarget {
   }
 
   /**
-   * recover from an ICE failure, or close with a fatal error if retrying is hopeless
+   * attempt to recover from a dropped connection, or close with a fatal error
+   * if retrying is hopeless
    */
-  _onIceFailed() {
+  _recover() {
     this._isConnected = false;
 
     // a TURN server rejecting our credentials never recovers by retrying
     if (this._turnError !== null) {
+      const { code, url } = this._turnError;
       this._closeWithError(
-        new Error(
-          `TURN server rejected credentials (${this._turnError.code}) for ${this._turnError.url}`,
-        ),
+        new Error(`TURN server rejected credentials (${code}) for ${url}`),
       );
       return;
     }
@@ -361,7 +363,7 @@ export class Peer extends EventTarget {
   }
 
   /**
-   * @param {RTCDataChannelEvent|Event} event - contains the WebRTC data channel if RTCDataChannelEvent
+   * @param {RTCDataChannelEvent|Event} event
    */
   _onDataChannel(event) {
     try {
@@ -369,7 +371,7 @@ export class Peer extends EventTarget {
         this._dataChannel = event.channel;
       }
 
-      this._dataChannel.binaryType = "blob"; // receive `Blob`s for binary messages
+      this._dataChannel.binaryType = "blob"; // receive messages as `Blob`s
       this._dataChannel.addEventListener(
         "message",
         this._onDataChannelMessage.bind(this),
@@ -387,7 +389,7 @@ export class Peer extends EventTarget {
   }
 
   /**
-   * @param {MessageEvent & { data: Blob|string }} event - contains the message sent from the peer
+   * @param {MessageEvent & { data: Blob|string }} event
    */
   _onDataChannelMessage(event) {
     try {
@@ -446,6 +448,22 @@ export class Peer extends EventTarget {
   }
 
   /**
+   * @param {number} [timeout]
+   * @returns {Promise<void>}
+   */
+  async drain(timeout = 5000) {
+    const deadline = Date.now() + timeout;
+
+    while (
+      this._dataChannel !== null &&
+      this._dataChannel.bufferedAmount > 0 &&
+      Date.now() < deadline
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+
+  /**
    * @param {Blob} message - the message to send
    * @returns {Promise<void>}
    */
@@ -479,7 +497,7 @@ export class Peer extends EventTarget {
     this._dataChannel.send(message);
     this._i++; // increment index in batch of messages
 
-    // if sent `BATCH_SIZE` messages, next message should wait for an acknowledgement
+    // after `BATCH_SIZE` messages, wait for an acknowledgement
     if (this._i === BATCH_SIZE) {
       this._state = STATE_WAITING;
     }
@@ -519,8 +537,9 @@ export class Peer extends EventTarget {
     if (this._i >= BATCH_SIZE) {
       this._i = 0;
 
-      // NOTE: it *could* be possible that immediately after receiving a blob (the above _blob event)
-      // the connection closed before the above code was run, resulting in this._dataChannel being null.
+      // NOTE: immediately after receiving a blob (the above _blob event), the
+      // connection could close before the above code runs, leaving
+      // this._dataChannel null.
       if (this._dataChannel !== null) {
         this._dataChannel.send("ok"); // send acknowledgement of batch
       } else {

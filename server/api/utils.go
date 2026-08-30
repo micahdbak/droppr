@@ -10,7 +10,7 @@ import (
 
 var dropCodeRegex = regexp.MustCompile(`^[A-Z0-9]{6}$`)
 
-type File struct {
+type FileInfo struct {
 	Name string `json:"name"`
 	Size int64  `json:"size"`
 	Type string `json:"type"`
@@ -56,7 +56,7 @@ func (a *API) insertSession(ctx context.Context, dropId, dropRole string) error 
 	return err
 }
 
-func (a *API) selectDropWithCode(ctx context.Context, code string) (File, string, error) {
+func (a *API) selectDropWithCode(ctx context.Context, code string) (FileInfo, string, error) {
 	row := a.db.QueryRow(
 		ctx,
 		"SELECT id, file_name, file_size, file_type FROM drops WHERE code = $1 AND is_complete = 'f'",
@@ -71,10 +71,10 @@ func (a *API) selectDropWithCode(ctx context.Context, code string) (File, string
 	)
 	err := row.Scan(&id, &fileName, &fileSize, &fileType)
 	if err != nil {
-		return File{}, "", err
+		return FileInfo{}, "", err
 	}
 
-	return File{Name: fileName, Size: fileSize, Type: fileType}, id, nil
+	return FileInfo{Name: fileName, Size: fileSize, Type: fileType}, id, nil
 }
 
 func (a *API) selectNumDropsComplete(ctx context.Context) (int64, error) {
