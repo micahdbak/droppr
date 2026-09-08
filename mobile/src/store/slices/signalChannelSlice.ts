@@ -1,5 +1,5 @@
 import type { StateCreator } from "zustand";
-import type { signalChannelSlice } from "@/interfaces/store";
+import type { SignalChannelSlice, StateStore } from "@/interfaces/store";
 import type {
   SignalChannelHandlers,
   WebSocketMessage,
@@ -9,21 +9,44 @@ const PING_RATE = 1000; // 1s
 const SC_PROTOCOL = "wss";
 const SC_URL = `${SC_PROTOCOL}://${process.env.HOST_URL}/sc`;
 
-export const createSignalChannelSlice: StateCreator<signalChannelSlice> = (
-  set,
-  get,
-) => ({
+const initialState: Pick<
+  SignalChannelSlice,
+  | "_webSocket"
+  | "_persist"
+  | "_pingInterval"
+  | "error"
+  | "status"
+  | "_signalChannelSliceHandlers"
+> = {
   _webSocket: null,
   _persist: false,
   _pingInterval: null,
   error: null,
   status: "closed",
-  _handlers: null,
+  _signalChannelSliceHandlers: null,
+};
+
+export const createSignalChannelSlice: StateCreator<
+  StateStore,
+  [],
+  [],
+  SignalChannelSlice
+> = (set, get) => ({
+  ...initialState,
   open: (handlers: SignalChannelHandlers | null) => {
     // Return if there's already an active websocket connection
     if (get()._webSocket !== null) return;
 
-    set({ _handlers: handlers, error: null, status: "connecting" });
+    // Clear any ping interval left over from a previous connection
+    get()._stopPinging();
+
+    // Start each connection from a clean slate so stale flags (e.g. _persist)
+    // from a prior session don't leak into the new one
+    set({
+      ...initialState,
+      _signalChannelSliceHandlers: handlers,
+      status: "connecting",
+    });
 
     get()._connect();
   },
@@ -88,7 +111,7 @@ export const createSignalChannelSlice: StateCreator<signalChannelSlice> = (
         get()._connect();
       }
       set({ status: get()._persist ? "connecting" : "closed" });
-      get()._handlers?.onDisconnected?.();
+      get()._signalChannelSliceHandlers?.onDisconnected?.();
     } catch (err) {
       get()._onWebSocketfail(<Error>err);
     }
@@ -103,7 +126,7 @@ export const createSignalChannelSlice: StateCreator<signalChannelSlice> = (
           // stop pinging; other side has connected
           if (get()._stopPinging()) {
             set({ status: "connected" });
-            get()._handlers?.onConnected?.();
+            get()._signalChannelSliceHandlers?.onConnected?.();
           }
 
           if (message === "ping") {
@@ -123,8 +146,11 @@ export const createSignalChannelSlice: StateCreator<signalChannelSlice> = (
           // the signal channel has failed to send a message to the other end
           case "failed":
             if (get()._pingInterval === null) {
+              // the channel is no longer reliably up
+              set({ status: "disconnected" });
+
               // dispatch disconnected event
-              get()._handlers?.onDisconnected();
+              get()._signalChannelSliceHandlers?.onDisconnected();
 
               // start pinging again
               get()._startPinging();
@@ -135,7 +161,7 @@ export const createSignalChannelSlice: StateCreator<signalChannelSlice> = (
           // the signal channel has passed along a message from the peer
           default:
             // dispatch message event
-            get()._handlers?.onMessage(message);
+            get()._signalChannelSliceHandlers?.onMessage(message);
 
             break;
         }
@@ -147,19 +173,29 @@ export const createSignalChannelSlice: StateCreator<signalChannelSlice> = (
     }
   },
   _onWebSocketfail: (err: Error) => {
-    get().close();
+    get().closeSignalChannel();
     set({ error: err });
-    get()._handlers?.onError?.(err);
+    get()._signalChannelSliceHandlers?.onError?.(err);
   },
-  send: (data: string) => {
+  sendToSignalChannel: (data: string) => {
     // don't send the message when not connected
     if (get()._webSocket === null || get()._pingInterval !== null) {
+      // only downgrade a channel we believed was up; a send while still
+      // "connecting" is a caller error, not a channel failure
+      if (get().status === "connected") set({ status: "disconnected" });
       throw new Error("Not connected.");
     }
 
-    get()._webSocket?.send(data);
+    try {
+      get()._webSocket?.send(data);
+    } catch (err) {
+      // the send failed; the channel is no longer up
+      set({ status: "disconnected" });
+      get()._signalChannelSliceHandlers?.onDisconnected?.();
+      throw err;
+    }
   },
-  close: () => {
+  closeSignalChannel: () => {
     // don't persist and attempt to reconnect after closing the WebSocket
     set({ _persist: false });
 
