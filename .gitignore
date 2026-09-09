@@ -28,3 +28,27 @@ webclient/public/tailwind.css
 *.tar
 *.gz
 *.txt
+
+# Expo
+.expo/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+/mobile/ios/
+/mobile/android/
+
+# Metro
+.metro-health-check*
+
+*.pem
+*.tsbuildinfo
+
+*/.claude

@@ -160,6 +160,29 @@ functions/classes, and add `export * from "./name.js";` to `lib/index.js`.
   classes, props, etc., to make a comment redundant and the meaning of something
   obvious.
 
+## mobile
+
+React Native app for droppr (P2P file transfer), built with Expo and
+`expo-router`. WebRTC via `react-native-webrtc`, state via Zustand.
+Run all commands from `mobile/`.
+
+### Commands
+
+- `bun run start` - start the Expo dev server.
+- `bun run ios` / `bun run android` - build and run on a simulator/device.
+- `bun run web` - start Expo for web.
+- `bun run lint` - `expo lint`.
+- `bun run format` - Prettier write.
+- `bun run format:check` - Prettier check.
+
+Always run `lint` and `format:check` after changes; fix all errors.
+
+### Expo has changed
+
+Expo has changed. Read the exact versioned docs at
+https://docs.expo.dev/versions/v57.0.0/ before writing any code; do not rely on
+memory of older Expo/React Native APIs.
+
 ## documentation
 
 Applies to `README.md` and this file.
