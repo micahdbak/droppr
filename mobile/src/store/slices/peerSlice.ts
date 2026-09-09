@@ -116,8 +116,9 @@ export const createPeerSlice: StateCreator<StateStore, [], [], PeerSlice> = (
   _onSignalChannelError: (err: Error) => {
     // signal channel failure is a fatal error
     get().closePeer(); // don't attempt to reconnect
-    set({ error: new Error("signal channel error", { cause: err }) });
-    get()._peerStateHandlers?.onError();
+    const error = new Error("signal channel error", { cause: err });
+    set({ error: error });
+    get()._peerStateHandlers?.onError(error);
   },
   _onSignalChannelConnected: async () => {
     try {
@@ -133,7 +134,7 @@ export const createPeerSlice: StateCreator<StateStore, [], [], PeerSlice> = (
         get().sendToSignalChannel(JSON.stringify(packet));
       }
     } catch (err) {
-      get()._onError(<Error>err);
+      get()._onPeerError(err as Error);
     }
   },
   _onSignalChannelDisconnected: () => set({ _iceRestart: true }),
@@ -191,12 +192,10 @@ export const createPeerSlice: StateCreator<StateStore, [], [], PeerSlice> = (
         }
 
         default:
-          throw new Error(
-            "got unexpected message: " + JSON.stringify(message),
-          );
+          throw new Error("got unexpected message: " + JSON.stringify(message));
       }
     } catch (err) {
-      get()._onError(<Error>err);
+      get()._onPeerError(err as Error);
     }
   },
   _restart: () => {
@@ -218,7 +217,7 @@ export const createPeerSlice: StateCreator<StateStore, [], [], PeerSlice> = (
     try {
       get()._restart();
     } catch (err) {
-      get()._onError(<Error>err);
+      get()._onPeerError(err as Error);
     }
   },
   _onIceConnectionStateChange: () => {
@@ -228,7 +227,7 @@ export const createPeerSlice: StateCreator<StateStore, [], [], PeerSlice> = (
 
       console.log(`ICE connection state: ${peerConnection.iceConnectionState}`);
     } catch (err) {
-      get()._onError(<Error>err);
+      get()._onPeerError(err as Error);
     }
   },
   _onConnectionStateChange: () => {
@@ -251,7 +250,7 @@ export const createPeerSlice: StateCreator<StateStore, [], [], PeerSlice> = (
         get()._recover();
       }
     } catch (err) {
-      get()._onError(<Error>err);
+      get()._onPeerError(err as Error);
     }
   },
   // Attempts to recover from a dropped connection, or close with a fatal error if retrying is hopeless
@@ -280,8 +279,9 @@ export const createPeerSlice: StateCreator<StateStore, [], [], PeerSlice> = (
   },
   _closeWithError: (cause: Error) => {
     get().closePeer();
-    set({ error: new Error("connection failed", { cause }) });
-    get()._peerStateHandlers?.onError();
+    const error = new Error("connection failed", { cause });
+    set({ error: error });
+    get()._peerStateHandlers?.onError(error);
   },
   _onIceCandidate: (event: RTCPeerConnectionIceEvent) => {
     try {
@@ -298,7 +298,7 @@ export const createPeerSlice: StateCreator<StateStore, [], [], PeerSlice> = (
         }
       }
     } catch (err) {
-      get()._onError(<Error>err);
+      get()._onPeerError(err as Error);
     }
   },
   _onDataChannel: (event: RTCDataChannelEvent | Event) => {
@@ -320,7 +320,7 @@ export const createPeerSlice: StateCreator<StateStore, [], [], PeerSlice> = (
       });
       get()._peerStateHandlers?.onConnected();
     } catch (err) {
-      get()._onError(<Error>err);
+      get()._onPeerError(err as Error);
     }
   },
   _onDataChannelMessage: (event: DataChannelMessage) => {
@@ -343,7 +343,7 @@ export const createPeerSlice: StateCreator<StateStore, [], [], PeerSlice> = (
             throw new Error("dropper sent more messages in batch than allowed");
           }
 
-          get()._peerStateHandlers?.onBlob();
+          get()._peerStateHandlers?.onBlob?.();
         }
       } else if (typeof data === "string") {
         // data is a text message; check if it is an acknowledgement
@@ -353,7 +353,7 @@ export const createPeerSlice: StateCreator<StateStore, [], [], PeerSlice> = (
           get()._isDropper
         ) {
           set({ _state: STATE_READY, _i: 0 });
-          get()._peerStateHandlers?.onOk();
+          get()._peerStateHandlers?.onOk?.();
         } else {
           throw new Error("got unexpected text message: " + data);
         }
@@ -361,13 +361,13 @@ export const createPeerSlice: StateCreator<StateStore, [], [], PeerSlice> = (
         throw new Error("got unexpected message: " + JSON.stringify(data));
       }
     } catch (err) {
-      get()._onError(<Error>err);
+      get()._onPeerError(err as Error);
     }
   },
-  _onError: (err: Error) => {
+  _onPeerError: (err: Error) => {
     get().closePeer();
     set({ error: err });
-    get()._peerStateHandlers?.onError();
+    get()._peerStateHandlers?.onError(err);
   },
   closePeer: () => {
     // close the signal channel

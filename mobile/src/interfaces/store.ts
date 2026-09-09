@@ -4,6 +4,7 @@ import type {
   DataChannelMessage,
   PeerHandlers,
   SignalPacket,
+  DropperHandlers,
 } from "./types";
 
 export interface SignalChannelSlice {
@@ -72,7 +73,7 @@ export interface PeerSlice {
   _onIceCandidate: (event: RTCPeerConnectionIceEvent) => void;
   _onDataChannel: (event: RTCDataChannelEvent | Event) => void;
   _onDataChannelMessage: (event: DataChannelMessage) => void;
-  _onError: (err: Error) => void;
+  _onPeerError: (err: Error) => void;
   closePeer: () => void;
   drain: (timeout?: number) => Promise<void>;
   sendToRTC: (message: Blob) => Promise<void>;
@@ -80,4 +81,19 @@ export interface PeerSlice {
   resetPeer: () => void;
 }
 
-export type StateStore = SignalChannelSlice & PeerSlice & SharedSlice;
+export interface DropperSlice {
+  bytesSent: number;
+  error: Error | null;
+  _dropperHandlers: DropperHandlers | null;
+
+  startDropper: (file: File, turnServers: RTCIceServer[]) => void;
+  _dropFile: (file: File, turnServers: RTCIceServer[]) => Promise<void>;
+  _createPeer: (iceServers: RTCIceServer[]) => void;
+  _resetDropper: () => void;
+  _onDropperError: (err: Error) => void;
+}
+
+export type StateStore = SignalChannelSlice &
+  PeerSlice &
+  DropperSlice &
+  SharedSlice;

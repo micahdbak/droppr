@@ -73,7 +73,7 @@ export const createSignalChannelSlice: StateCreator<
 
       webSocket.send('"ping"');
     } catch (err) {
-      get()._onWebSocketfail(<Error>err);
+      get()._onWebSocketfail(err as Error);
     }
   },
   _startPinging: () => {
@@ -95,7 +95,7 @@ export const createSignalChannelSlice: StateCreator<
       get()._startPinging();
       set({ _persist: true }); // connected once; reconnect on failure
     } catch (err) {
-      get()._onWebSocketfail(<Error>err);
+      get()._onWebSocketfail(err as Error);
     }
   },
   _onWebSocketClose: () => {
@@ -113,7 +113,7 @@ export const createSignalChannelSlice: StateCreator<
       set({ status: get()._persist ? "connecting" : "closed" });
       get()._signalChannelSliceHandlers?.onDisconnected?.();
     } catch (err) {
-      get()._onWebSocketfail(<Error>err);
+      get()._onWebSocketfail(err as Error);
     }
   },
   _onWebSocketMessage: (event: WebSocketMessage) => {
@@ -169,7 +169,7 @@ export const createSignalChannelSlice: StateCreator<
         throw new Error("received unexpected message: " + message);
       }
     } catch (err) {
-      get()._onWebSocketfail(<Error>err);
+      get()._onWebSocketfail(err as Error);
     }
   },
   _onWebSocketfail: (err: Error) => {

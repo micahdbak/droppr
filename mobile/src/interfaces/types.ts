@@ -18,8 +18,15 @@ export type SignalPacket =
 
 export type PeerHandlers = {
   onConnected: () => unknown;
-  onError: () => unknown;
+  onError: (error: Error) => unknown;
   onDisconnected: () => unknown;
-  onOk: () => unknown;
-  onBlob: () => unknown;
+  onOk: (() => unknown) | null;
+  onBlob: (() => unknown) | null;
+};
+
+export type DropperHandlers = {
+  onConnected: (bytesSent: number) => unknown;
+  disconnected: () => unknown;
+  onError: (error: Error) => unknown;
+  onDone: () => unknown;
 };
