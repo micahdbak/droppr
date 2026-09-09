@@ -1,6 +1,6 @@
 {
   "name": "droppr",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Peer-to-peer file transfer service.",
   "license": "MIT",
   "private": true,
