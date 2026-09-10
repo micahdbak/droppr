@@ -23,7 +23,17 @@ export const createDropperSlice: StateCreator<
   },
   _dropFile: async (file: File, turnServers: RTCIceServer[]) => {
     try {
-      get()._createPeer(turnServers);
+      get().createPeer(true, turnServers, {
+        onConnected: () => get()._dropperHandlers?.onConnected(get().bytesSent),
+        onDisconnected: () => get()._dropperHandlers?.disconnected(),
+        onError: (error: Error) => {
+          const peerError = new Error("peer error", { cause: error });
+          set({ error: peerError });
+          get()._dropperHandlers?.onError(peerError);
+        },
+        onOk: null,
+        onBlob: null,
+      });
 
       let bytesSent = get().bytesSent;
 
@@ -42,19 +52,6 @@ export const createDropperSlice: StateCreator<
     } catch (err) {
       get()._onDropperError(err as Error);
     }
-  },
-  _createPeer: (iceServers: RTCIceServer[]) => {
-    get().createPeer(true, iceServers, {
-      onConnected: () => get()._dropperHandlers?.onConnected(get().bytesSent),
-      onDisconnected: () => get()._dropperHandlers?.disconnected(),
-      onError: (error: Error) => {
-        const peerError = new Error("peer error", { cause: error });
-        set({ error: peerError });
-        get()._dropperHandlers?.onError(peerError);
-      },
-      onOk: null,
-      onBlob: null,
-    });
   },
   _resetDropper: () => {
     get().resetPeer();
