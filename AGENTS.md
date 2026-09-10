@@ -209,20 +209,17 @@ All components should be position-agnostic, unless explicitly floating.
 Do not add a prose JSDoc description if the name and `@param` types are
 sufficient (only document genuinely non-obvious behavior).
 Prefer idiomatic React names (verb/noun for behavior, `XInput` for inputs).
-Barrel-exported via `components/index.js`.
 
 Explore existing components in `src/components` before creating new ones.
 Prefer the composition of existing components over hard-coding a larger one.
 
-When adding a component: create `src/components/Name.jsx`, export a named
-function, and add `export * from "./Name.jsx";` to `components/index.js`
-(maintain alphabetical order).
+When adding a component: create `src/components/Name.jsx` and export a named function.
 
 ### `src/screens/`
 
 Full-screen layouts, owns page-level positioning and uses components.
 
-When adding a layout: create `src/screens/Name.jsx`, export a named function,
+When adding a layout: create `src/screens/Name.jsx` and export a named function
 
 ## documentation
 
