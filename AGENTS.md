@@ -183,6 +183,50 @@ Expo has changed. Read the exact versioned docs at
 https://docs.expo.dev/versions/v57.0.0/ before writing any code; do not rely on
 memory of older Expo/React Native APIs.
 
+
+### File layout
+
+```
+mobile/
+- assets/         static assets served as-is (images, gifs, favicon)
+- src/
+- - app/          Expo Router routes and layouts (thin, delegate to screens/)
+- - screens/      screen implementations rendered by routes
+- - components/   reusable presentational UI components
+- - interfaces/   Interfaces and types used across the application
+- - store/        Zustand slices for serializable app state
+- - services/     services for handling specific actions across the app
+- global.css      global stylings applied to the app components
+```
+
+### `src/components/`
+
+Small, reusable, mostly stateless UI primitives.
+Each is props-driven and is intended to hold mostly visuals.
+Keep components simple and single-purpose.
+All components should be position-agnostic, unless explicitly floating.
+
+Do not add a prose JSDoc description if the name and `@param` types are
+sufficient (only document genuinely non-obvious behavior).
+Prefer idiomatic React names (verb/noun for behavior, `XInput` for inputs).
+Barrel-exported via `components/index.js`.
+
+Explore existing components in `src/components` before creating new ones.
+Prefer the composition of existing components over hard-coding a larger one.
+
+When adding a component: create `src/components/Name.jsx`, export a named
+function, and add `export * from "./Name.jsx";` to `components/index.js`
+(maintain alphabetical order).
+
+### `src/app/screens/`
+
+Full-screen layouts
+Owns page-level positioning and uses components.
+Barrel-exported via `layouts/index.js`.
+
+When adding a layout: create `src/layouts/Name.jsx`, export a named function,
+and add `export * from "./Name.jsx";` to `screens/index.js`.
+
 ## documentation
 
 Applies to `README.md` and this file.
