@@ -219,7 +219,18 @@ When adding a component: create `src/components/Name.jsx` and export a named fun
 
 Full-screen layouts, owns page-level positioning and uses components.
 
-When adding a layout: create `src/screens/Name.jsx` and export a named function
+When adding a layout: create `src/screens/Name.jsx` and export a named function.
+
+### Conventions
+
+- Imports: `@/` for `src/`; relative imports for sibling files (use the
+  `.tsx`/`.ts` extension in import paths).
+- Static images live in `assets/`; reference by absolute path (`/drop.gif`).
+- Prefer composing small components over duplicating Tailwind; a route should
+  contain little to no Tailwind.
+- Comments should be utilitarian: always prefer renaming variables, functions,
+  classes, props, etc., to make a comment redundant and the meaning of something
+  obvious.
 
 ## documentation
 
