@@ -31,8 +31,6 @@ export const createDropperSlice: StateCreator<
           set({ error: peerError });
           get()._dropperHandlers?.onError(peerError);
         },
-        onOk: null,
-        onBlob: null,
       });
 
       let bytesSent = get().bytesSent;

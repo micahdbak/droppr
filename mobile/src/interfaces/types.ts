@@ -8,6 +8,12 @@ export type FileReceiver = {
   href: string;
 };
 
+// Packets exchanged over the signal channel as part of the WebRTC handshake.
+export type SignalPacket =
+  | { type: "offer"; offer: RTCSessionDescriptionInit }
+  | { type: "answer"; answer: RTCSessionDescriptionInit }
+  | { type: "candidate"; candidate: RTCIceCandidateInit | null };
+
 // Handler types define a series of functions that should be called on specific events (replacing multiple addEventListener() calls)
 export type SignalChannelHandlers = {
   onConnected: () => unknown;
@@ -16,18 +22,12 @@ export type SignalChannelHandlers = {
   onError: (error: Error) => unknown;
 };
 
-// Packets exchanged over the signal channel as part of the WebRTC handshake.
-export type SignalPacket =
-  | { type: "offer"; offer: RTCSessionDescriptionInit }
-  | { type: "answer"; answer: RTCSessionDescriptionInit }
-  | { type: "candidate"; candidate: RTCIceCandidateInit | null };
-
 export type PeerHandlers = {
   onConnected: () => unknown;
   onError: (error: Error) => unknown;
   onDisconnected: () => unknown;
-  onOk: (() => unknown) | null;
-  onBlob: (() => unknown) | null;
+  onOk?: () => unknown;
+  onBlob?: () => unknown;
 };
 
 export type DropperHandlers = {
