@@ -218,14 +218,11 @@ When adding a component: create `src/components/Name.jsx`, export a named
 function, and add `export * from "./Name.jsx";` to `components/index.js`
 (maintain alphabetical order).
 
-### `src/app/screens/`
+### `src/screens/`
 
-Full-screen layouts
-Owns page-level positioning and uses components.
-Barrel-exported via `layouts/index.js`.
+Full-screen layouts, owns page-level positioning and uses components.
 
-When adding a layout: create `src/layouts/Name.jsx`, export a named function,
-and add `export * from "./Name.jsx";` to `screens/index.js`.
+When adding a layout: create `src/screens/Name.jsx`, export a named function,
 
 ## documentation
 
