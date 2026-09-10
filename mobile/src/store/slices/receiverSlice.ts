@@ -66,8 +66,6 @@ export const createReceiverSlice: StateCreator<
           set({ error: peerError });
           get()._receiverHandlers?.onError(peerError);
         },
-        onOk: null,
-        onBlob: null,
       });
 
       let bytesReceived = 0;
