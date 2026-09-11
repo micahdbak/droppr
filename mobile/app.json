@@ -34,7 +34,8 @@
           "imageWidth": 76
         }
       ],
-      "@config-plugins/react-native-webrtc"
+      "@config-plugins/react-native-webrtc",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

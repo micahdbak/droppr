@@ -4,6 +4,8 @@ import type {
   DataChannelMessage,
   PeerHandlers,
   SignalPacket,
+  DropperHandlers,
+  FileReceiver,
 } from "./types";
 
 export interface SignalChannelSlice {
@@ -72,7 +74,7 @@ export interface PeerSlice {
   _onIceCandidate: (event: RTCPeerConnectionIceEvent) => void;
   _onDataChannel: (event: RTCDataChannelEvent | Event) => void;
   _onDataChannelMessage: (event: DataChannelMessage) => void;
-  _onError: (err: Error) => void;
+  _onPeerError: (err: Error) => void;
   closePeer: () => void;
   drain: (timeout?: number) => Promise<void>;
   sendToRTC: (message: Blob) => Promise<void>;
@@ -80,4 +82,36 @@ export interface PeerSlice {
   resetPeer: () => void;
 }
 
-export type StateStore = SignalChannelSlice & PeerSlice & SharedSlice;
+export interface DropperSlice {
+  bytesSent: number;
+  error: Error | null;
+  _dropperHandlers: DropperHandlers | null;
+
+  startDropper: (file: File, turnServers: RTCIceServer[]) => void;
+  _dropFile: (file: File, turnServers: RTCIceServer[]) => Promise<void>;
+  _resetDropper: () => void;
+  _onDropperError: (err: Error) => void;
+}
+
+export interface ReceiverSlice {
+  file: FileReceiver; // information on the file being received
+  bytesReceived: number; // number of bytes received from the peer
+  processingProgress: number; // progress of processing file, from 0 to 100
+  _turnServers: RTCIceServer[]; // TURN servers to use for the peer connection
+  _receiverHandlers: DropperHandlers | null;
+  error: Error | null;
+
+  openReceiver: (
+    file: FileReceiver,
+    turnServers: RTCIceServer[],
+    receiverHandlers: DropperHandlers,
+  ) => void;
+  _fileSystemAccessLoop: () => Promise<void>;
+  _onReceiverError: (err: Error) => void;
+}
+
+export type StateStore = SignalChannelSlice &
+  PeerSlice &
+  DropperSlice &
+  ReceiverSlice &
+  SharedSlice;
